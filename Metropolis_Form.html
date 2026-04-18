@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Metropolis Contact</title>
+
+  <!-- GA4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-45EE9R3VVF"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-45EE9R3VVF', { send_page_view: false });
+  </script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f7fb;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .container {
+      background: #fff;
+      padding: 25px;
+      border-radius: 12px;
+      width: 320px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      text-align: center;
+    }
+
+    .logo {
+      width: 140px;
+      margin-bottom: 10px;
+    }
+
+    h2 {
+      margin-bottom: 15px;
+      font-weight: 600;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      transition: border 0.2s;
+    }
+
+    input:focus {
+      border-color: #4f46e5;
+      outline: none;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #111; /* matches logo */
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      margin-top: 15px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #333;
+    }
+
+    button:disabled {
+      background: #aaa;
+    }
+
+    #toast {
+      margin-top: 10px;
+      font-size: 13px;
+      min-height: 16px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <!-- LOGO -->
+  <img src="Metropolis_logo.jpg" alt="Metropolis Logo" class="logo">
+
+  <h2>Join Metropolis</h2>
+
+  <form id="contact-form">
+    <input type="text" id="contact-first-name" placeholder="First Name" required>
+    <input type="text" id="contact-last-name" placeholder="Last Name">
+    <input type="email" id="contact-email-input" placeholder="Email" required>
+
+    <button type="submit" id="contact-submit-btn">Get Started</button>
+  </form>
+
+  <div id="toast"></div>
+</div>
+
+<!-- SAME SCRIPT (unchanged) -->
+<script>
+const WEBHOOK = "https://webhooks.creatio.com/webhooks/a2576586-f5c3-4e0d-9eee-37efe4ee87b6";
+const GA_ID = "G-45EE9R3VVF";
+
+const Identity = {
+  get: () => {
+    try { return JSON.parse(localStorage.getItem("metropolis_identity")); }
+    catch { return null; }
+  },
+  save: (data) => {
+    try { localStorage.setItem("metropolis_identity", JSON.stringify(data)); }
+    catch {}
+  }
+};
+
+function getClientId() {
+  const match = document.cookie.match(/_ga=GA\d+\.\d+\.(\d+\.\d+)/);
+  return match ? match[1] : "";
+}
+
+function track(event, params={}) {
+  if (typeof gtag === "function") {
+    gtag('event', event, params);
+  }
+}
+
+function identify(email, clientId) {
+  if (typeof gtag !== "function") return;
+  gtag('config', GA_ID, { user_id: email, send_page_view: false });
+}
+
+function toast(msg, error=false) {
+  const el = document.getElementById("toast");
+  el.style.color = error ? "red" : "green";
+  el.textContent = msg;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  const saved = Identity.get();
+  if (saved) identify(saved.email, saved.clientId);
+
+  track("page_view", {
+    page_title: document.title,
+    page_location: window.location.href
+  });
+
+  const form = document.getElementById("contact-form");
+  const btn  = document.getElementById("contact-submit-btn");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    if (btn.disabled) return;
+
+    const firstName = document.getElementById("contact-first-name").value.trim();
+    const lastName  = document.getElementById("contact-last-name").value.trim();
+    const email     = document.getElementById("contact-email-input").value.trim();
+    const clientId  = getClientId();
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!firstName || !email) {
+      toast("Fill required fields", true);
+      return;
+    }
+
+    if (!emailRegex.test(email)) {
+      toast("Invalid email", true);
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Sending...";
+
+    try {
+      const res = await fetch(WEBHOOK, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          FirstName: firstName,
+          LastName: lastName,
+          Email: email,
+          TrackingUserId: clientId,
+          PageUrl: window.location.href
+        })
+      });
+
+      if (!res.ok) throw new Error("Failed");
+
+      Identity.save({ email, firstName, clientId });
+      identify(email, clientId);
+
+      track("subscribe", {
+        email_domain: email.split("@")[1]
+      });
+
+      toast("Welcome to Metropolis!");
+      form.reset();
+
+    } catch (err) {
+      toast("Network error. Try again.", true);
+    }
+
+    btn.disabled = false;
+    btn.textContent = "Get Started";
+  });
+
+});
+</script>
+
+</body>
+</html>
