@@ -4,13 +4,50 @@
   <meta charset="UTF-8">
   <title>Metropolis Contact</title>
 
-  <!-- GA4 -->
+  <!-- ✅ GA4 -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-DL4C0JH2J1"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
     gtag('config', 'G-DL4C0JH2J1');
+  </script>
+
+  <!-- ✅ Creatio GA Bridge (IMPORTANT) -->
+  <script>
+  (async () => {
+    const GA_ID = "G-DL4C0JH2J1";
+
+    const clientId = await new Promise(resolve => {
+      gtag('get', GA_ID, 'client_id', resolve);
+    });
+
+    const sessionId = await new Promise(resolve => {
+      gtag('get', GA_ID, 'session_id', resolve);
+    });
+
+    const trackingId = `${clientId}:${GA_ID}`;
+
+    /* Inject TrackingUserId into form */
+    function inject() {
+      document.querySelectorAll("form").forEach(form => {
+        let input = form.querySelector("input[name='TrackingUserId']");
+        if (!input) {
+          input = document.createElement("input");
+          input.type = "hidden";
+          input.name = "TrackingUserId";
+          form.appendChild(input);
+        }
+        input.value = trackingId;
+      });
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", inject);
+    } else {
+      inject();
+    }
+  })();
   </script>
 
   <style>
@@ -23,7 +60,6 @@
       height: 100vh;
       margin: 0;
     }
-
     .container {
       background: #fff;
       padding: 25px;
@@ -32,12 +68,6 @@
       box-shadow: 0 10px 30px rgba(0,0,0,0.08);
       text-align: center;
     }
-
-    .logo {
-      width: 140px;
-      margin-bottom: 10px;
-    }
-
     input {
       width: 100%;
       padding: 10px;
@@ -45,7 +75,6 @@
       border-radius: 6px;
       border: 1px solid #ccc;
     }
-
     button {
       width: 100%;
       padding: 12px;
@@ -55,18 +84,13 @@
       border-radius: 6px;
       margin-top: 15px;
       cursor: pointer;
-      font-weight: bold;
     }
-
     button:disabled {
       background: #aaa;
-      cursor: not-allowed;
     }
-
     #toast {
       margin-top: 10px;
       font-size: 13px;
-      min-height: 16px;
     }
   </style>
 </head>
@@ -74,7 +98,6 @@
 <body>
 
 <div class="container">
-  <img src="Metropolis_logo.jpg" class="logo">
   <h2>Join Metropolis</h2>
 
   <form id="contact-form">
@@ -89,7 +112,6 @@
 </div>
 
 <script>
-/* ================= CONFIG ================= */
 const WEBHOOK = "https://webhooks.creatio.com/webhooks/a92f744b-4c7c-4fdb-81e9-53cca979a993";
 const GA_ID = "G-DL4C0JH2J1";
 
@@ -97,143 +119,60 @@ const CREATIO_LANDING_ID  = 'c76b7951-3b99-43d3-9466-01abaf130f43';
 const CREATIO_FORM_ID     = 'a6058324-c3ec-aa2e-add4-12522446fcca';
 const CREATIO_ENTITY_NAME = 'FormSubmit';
 
-/* ================= IDENTITY ================= */
-const Identity = {
-  get: () => {
-    try { return JSON.parse(localStorage.getItem("metropolis_identity")); }
-    catch { return null; }
-  },
-  save: (data) => {
-    try { localStorage.setItem("metropolis_identity", JSON.stringify(data)); }
-    catch {}
-  }
-};
-
-/* ================= GA CLIENT ID ================= */
-function getClientId() {
-  return new Promise((resolve) => {
-    if (typeof gtag !== "function") return resolve("");
-    gtag('get', GA_ID, 'client_id', (clientId) => {
-      resolve(clientId || "");
-    });
-  });
-}
-
-/* ================= TRACKING ================= */
-function track(event, params={}) {
-  if (typeof gtag === "function") {
-    gtag('event', event, params);
-  }
-}
-
-/* ================= USER IDENTIFY ================= */
-function generateUserId(email) {
-  return btoa(email);
-}
-
-function identify(email) {
-  if (typeof gtag !== "function") return;
-  gtag('config', GA_ID, {
-    user_id: generateUserId(email),
-    send_page_view: false
-  });
-}
-
-/* ================= UI ================= */
 function toast(msg, error=false) {
   const el = document.getElementById("toast");
   el.style.color = error ? "red" : "green";
   el.textContent = msg;
 }
 
-/* ================= MAIN ================= */
-document.addEventListener("DOMContentLoaded", () => {
-
-  track("page_view");
-  track("session_start", { timestamp: Date.now() });
-
-  const saved = Identity.get();
-  if (saved) identify(saved.email);
-
-  const form = document.getElementById("contact-form");
-  const btn  = document.getElementById("contact-submit-btn");
-
-  document.getElementById("contact-email-input")
-    .addEventListener("focus", () => track("form_start"));
-
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    if (btn.disabled) return;
-
-    const firstName = document.getElementById("contact-first-name").value.trim();
-    const lastName  = document.getElementById("contact-last-name").value.trim();
-    const email     = document.getElementById("contact-email-input").value.trim();
-    const phoneNumber     = document.getElementById("contact-number").value.trim();
-
-    if (!firstName || !email) {
-      toast("Fill required fields", true);
-      return;
-    }
-
-    if (!email.includes("@")) {
-      toast("Invalid email", true);
-      return;
-    }
-
-    track("form_submit_attempt");
-
-    btn.disabled = true;
-    btn.textContent = "Sending...";
-
-    try {
-      const clientId = await getClientId();
-
-      const res = await fetch(WEBHOOK, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          FirstName: firstName,
-          LastName: lastName,
-          Email: email,
-          PhoneNumber: phoneNumber,
-
-          /* 🔥 FIXED PART */
-          EntityName: CREATIO_ENTITY_NAME,
-          FormId: CREATIO_FORM_ID,
-          
-
-          /* Tracking */
-          TrackingUserId: clientId + ':' + GA_ID,
-          PageUrl: window.location.href,
-          LandingPageId: CREATIO_LANDING_ID
-        })
-      });
-
-      if (!res.ok) throw new Error("Failed");
-
-      Identity.save({ email, firstName, clientId });
-      identify(email);
-
-      track("lead_created", {
-        method: "web_form",
-        email_domain: email.split("@")[1]
-      });
-
-      toast("Welcome to Metropolis!");
-      form.reset();
-
-    } catch (err) {
-      console.error(err);
-      toast("Network error. Try again.", true);
-    }
-
-    btn.disabled = false;
-    btn.textContent = "Get Started";
+function getClientId() {
+  return new Promise(resolve => {
+    gtag('get', GA_ID, 'client_id', resolve);
   });
+}
 
+document.getElementById("contact-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const firstName = document.getElementById("contact-first-name").value.trim();
+  const lastName  = document.getElementById("contact-last-name").value.trim();
+  const email     = document.getElementById("contact-email-input").value.trim();
+  const phone     = document.getElementById("contact-number").value.trim();
+
+  if (!firstName || !email) {
+    toast("Fill required fields", true);
+    return;
+  }
+
+  const clientId = await getClientId();
+
+  try {
+    const res = await fetch(WEBHOOK, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        FirstName: firstName,
+        LastName: lastName,
+        Email: email,
+        PhoneNumber: phone,
+
+        EntityName: CREATIO_ENTITY_NAME,
+        FormId: CREATIO_FORM_ID,
+        LandingPageId: CREATIO_LANDING_ID,
+
+        TrackingUserId: clientId + ':' + GA_ID,
+        PageUrl: window.location.href,
+        ReferrerUrl: document.referrer || ''
+      })
+    });
+
+    if (!res.ok) throw new Error();
+
+    toast("Success!");
+
+  } catch {
+    toast("Error submitting form", true);
+  }
 });
 </script>
 
