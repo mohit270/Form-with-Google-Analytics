@@ -5,7 +5,6 @@
   <title>Metropolis Contact</title>
 
   <!-- GA4 -->
-<!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-DL4C0JH2J1"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -40,29 +39,18 @@
       margin-bottom: 10px;
     }
 
-    h2 {
-      margin-bottom: 15px;
-      font-weight: 600;
-    }
-
     input {
       width: 100%;
       padding: 10px;
       margin-top: 10px;
       border-radius: 6px;
       border: 1px solid #ccc;
-      transition: border 0.2s;
-    }
-
-    input:focus {
-      border-color: #4f46e5;
-      outline: none;
     }
 
     button {
       width: 100%;
       padding: 12px;
-      background: #111; /* matches logo */
+      background: #111;
       color: #fff;
       border: none;
       border-radius: 6px;
@@ -71,12 +59,9 @@
       font-weight: bold;
     }
 
-    button:hover {
-      background: #333;
-    }
-
     button:disabled {
       background: #aaa;
+      cursor: not-allowed;
     }
 
     #toast {
@@ -90,28 +75,24 @@
 <body>
 
 <div class="container">
-
-  <!-- LOGO -->
-  <img src="Metropolis_logo.jpg" alt="Metropolis Logo" class="logo">
-
+  <img src="Metropolis_logo.jpg" class="logo">
   <h2>Join Metropolis</h2>
 
   <form id="contact-form">
     <input type="text" id="contact-first-name" placeholder="First Name" required>
     <input type="text" id="contact-last-name" placeholder="Last Name">
     <input type="email" id="contact-email-input" placeholder="Email" required>
-
     <button type="submit" id="contact-submit-btn">Get Started</button>
   </form>
 
   <div id="toast"></div>
 </div>
 
-<!-- SAME SCRIPT (unchanged) -->
 <script>
 const WEBHOOK = "https://webhooks.creatio.com/webhooks/a92f744b-4c7c-4fdb-81e9-53cca979a993";
 const GA_ID = "G-DL4C0JH2J1";
 
+/* ---------------- IDENTITY ---------------- */
 const Identity = {
   get: () => {
     try { return JSON.parse(localStorage.getItem("metropolis_identity")); }
@@ -123,40 +104,66 @@ const Identity = {
   }
 };
 
+/* ---------------- GA CLIENT ID (FIXED) ---------------- */
 function getClientId() {
-  const match = document.cookie.match(/_ga=GA\d+\.\d+\.(\d+\.\d+)/);
-  return match ? match[1] : "";
+  return new Promise((resolve) => {
+    if (typeof gtag !== "function") {
+      resolve("");
+      return;
+    }
+    gtag('get', GA_ID, 'client_id', (clientId) => {
+      resolve(clientId || "");
+    });
+  });
 }
 
+/* ---------------- TRACKING ---------------- */
 function track(event, params={}) {
   if (typeof gtag === "function") {
     gtag('event', event, params);
   }
 }
 
-function identify(email, clientId) {
-  if (typeof gtag !== "function") return;
-  gtag('config', GA_ID, { user_id: email, send_page_view: false });
+/* ---------------- SAFE USER IDENTIFY ---------------- */
+function generateUserId(email) {
+  return btoa(email); // simple encoding (safe alternative to raw email)
 }
 
+function identify(email) {
+  if (typeof gtag !== "function") return;
+
+  const userId = generateUserId(email);
+
+  gtag('config', GA_ID, {
+    user_id: userId,
+    send_page_view: false
+  });
+}
+
+/* ---------------- UI ---------------- */
 function toast(msg, error=false) {
   const el = document.getElementById("toast");
   el.style.color = error ? "red" : "green";
   el.textContent = msg;
 }
 
+/* ---------------- MAIN ---------------- */
 document.addEventListener("DOMContentLoaded", () => {
 
-  const saved = Identity.get();
-  if (saved) identify(saved.email, saved.clientId);
+  track("page_view");
+  track("session_start", { timestamp: Date.now() });
 
-  track("page_view", {
-    page_title: document.title,
-    page_location: window.location.href
-  });
+  const saved = Identity.get();
+  if (saved) identify(saved.email);
 
   const form = document.getElementById("contact-form");
   const btn  = document.getElementById("contact-submit-btn");
+
+  /* track form start */
+  document.getElementById("contact-email-input")
+    .addEventListener("focus", () => {
+      track("form_start");
+    });
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -166,7 +173,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const firstName = document.getElementById("contact-first-name").value.trim();
     const lastName  = document.getElementById("contact-last-name").value.trim();
     const email     = document.getElementById("contact-email-input").value.trim();
-    const clientId  = getClientId();
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -180,13 +186,20 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    track("form_submit_attempt");
+
     btn.disabled = true;
     btn.textContent = "Sending...";
 
     try {
+      const clientId = await getClientId();
+
       const res = await fetch(WEBHOOK, {
         method: "POST",
-        headers: {"Content-Type": "application/json"},
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": "YOUR_SECRET_KEY" // optional security
+        },
         body: JSON.stringify({
           FirstName: firstName,
           LastName: lastName,
@@ -199,9 +212,11 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!res.ok) throw new Error("Failed");
 
       Identity.save({ email, firstName, clientId });
-      identify(email, clientId);
 
-      track("subscribe", {
+      identify(email);
+
+      track("lead_created", {
+        method: "web_form",
         email_domain: email.split("@")[1]
       });
 
