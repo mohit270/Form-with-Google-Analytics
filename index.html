@@ -487,22 +487,20 @@
         const creatioConfig = {
           // Use exact element references that Creatio expects
           fields: {
-            "FirstName": document.getElementById("contact-first-name"),
-            "LastName": document.getElementById("contact-last-name"),
+            "FullName": fullName,
             "Email": document.getElementById("contact-email-input"),
             "PhoneNumber": document.getElementById("contact-number")
           },
           contactFields: {
-            "FirstName": document.getElementById("contact-first-name"),
-            "LastName": document.getElementById("contact-last-name"),
+            "FullName": fullName,
             "Email": document.getElementById("contact-email-input"),
             "Phone": document.getElementById("contact-number")
           },
           customFields: {
-            "WebFormId": CREATIO_FORM_ID,
+            "WebFormId": "81940100-8e25-4b07-9bb9-c81eda47d6df",
             // "LandingPageId": CREATIO_LANDING_ID
           },
-          landingId: CREATIO_LANDING_ID,
+          landingId: "81940100-8e25-4b07-9bb9-c81eda47d6df",
           serviceUrl: "https://184784-crm-bundle.creatio.com/0/ServiceModel/GeneratedObjectWebFormService.svc/SaveWebFormObjectData"
         };
         
