@@ -331,8 +331,8 @@
     /* ================= CONFIGURATION ================= */
     const WEBHOOK = "https://webhooks.creatio.com/webhooks/a92f744b-4c7c-4fdb-81e9-53cca979a993";
     const GA_ID = "G-DL4C0JH2J1";
-    const CREATIO_LANDING_ID = 'c76b7951-3b99-43d3-9466-01abaf130f43';
-    const CREATIO_FORM_ID = 'a6058324-c3ec-aa2e-add4-12522446fcca';
+    const CREATIO_LANDING_ID = 'b6937374-0db5-4caa-a18a-f3945a55cd59';
+    const CREATIO_FORM_ID = 'b6937374-0db5-4caa-a18a-f3945a55cd59';
     const CREATIO_ENTITY_NAME = 'FormSubmit';
     const SUBMIT_COOLDOWN = 30000;
     const AUTO_SAVE_DELAY = 2000;
@@ -499,8 +499,8 @@
             "Phone": document.getElementById("contact-number")
           },
           customFields: {
-            "FormId": CREATIO_FORM_ID,
-            "LandingPageId": CREATIO_LANDING_ID
+            "WebFormId": CREATIO_FORM_ID,
+            // "LandingPageId": CREATIO_LANDING_ID
           },
           landingId: CREATIO_LANDING_ID,
           serviceUrl: "https://184784-crm-bundle.creatio.com/0/ServiceModel/GeneratedObjectWebFormService.svc/SaveWebFormObjectData"
