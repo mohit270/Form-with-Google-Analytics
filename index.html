@@ -666,9 +666,6 @@
         TrackingUserId: formData.clientId + ':' + GA_ID,
         PageUrl: window.location.href,
         ReferrerUrl: document.referrer || "",
-        UserAgent: navigator.userAgent,
-        Timestamp: new Date().toISOString(),
-        ...formData.utm
       };
       
       const res = await fetch(WEBHOOK, {
