@@ -13,6 +13,39 @@
     gtag('js', new Date());
     gtag('config', 'G-DL4C0JH2J1');
   </script>
+  <!-- Creatio Web Analytics Library -->
+  <script src="https://cdn.creatio.com/JS/crt-landing-page.js"></script>
+  <script>
+    // Configure after library loads
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof crtLanding !== 'undefined') {
+        crtLanding.webhookServiceUrl = 'https://webhooks.creatio.com/webhooks/a92f744b-4c7c-4fdb-81e9-53cca979a993';
+        crtLanding.setParameter('LandingPageId', 'c76b7951-3b99-43d3-9466-01abaf130f43');
+        crtLanding.setParameter('FormId', 'a6058324-c3ec-aa2e-add4-12522446fcca');
+        crtLanding.init();
+        // Add after crtLanding.init()
+        const trackField = (fieldId, fieldName) => {
+          const field = document.getElementById(fieldId);
+          if (field) {
+            field.addEventListener('focus', () => {
+              crtLanding.trackEvent('field_focus', { field: fieldName });
+            });
+            field.addEventListener('blur', () => {
+              if (field.value.trim()) {
+                crtLanding.trackEvent('field_completed', { field: fieldName });
+              }
+            });
+          }
+        };
+
+        trackField('contact-first-name', 'first_name');
+        trackField('contact-last-name', 'last_name');
+        trackField('contact-email-input', 'email');
+        trackField('contact-number', 'phone');
+        console.log('[Creatio Web Analytics] Connected');
+      }
+    });
+  </script>
 
   <!-- jQuery - Version 1.11.2 for Creatio compatibility (critical) -->
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
