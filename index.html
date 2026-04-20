@@ -13,22 +13,10 @@
     gtag('config', 'G-DL4C0JH2J1');
   </script>
 
-  <!-- 🔥 Creatio Web Analytics -->
-  <script>
-  (function(w,d,s,o,f,js,fjs){
-    w['CreatioTrackingObject']=o;
-    w[o]=w[o]||function(){
-      (w[o].q=w[o].q||[]).push(arguments)
-    };
-    js=d.createElement(s),fjs=d.getElementsByTagName(s)[0];
-    js.async=1;js.src=f;
-    fjs.parentNode.insertBefore(js,fjs);
-  })(window,document,'script','ct','https://tracking.creatio.com/tracker.js');
-
-  /* ⚠️ REPLACE WITH YOUR REAL TRACKING ID */
-  ct('init','YOUR_CREATIO_TRACKING_ID');
-  ct('trackPageView');
-  </script>
+  <!-- Creatio Tracking Scripts -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+  <script src="https://webtracking-v01.creatio.com/JS/track-cookies.js"></script>
+  <script src="https://webtracking-v01.creatio.com/JS/create-object.js"></script>
 
   <style>
     body {
@@ -94,6 +82,7 @@
   <img src="Metropolis_logo.jpg" class="logo">
   <h2>Join Metropolis</h2>
 
+  <!-- ✅ FORM -->
   <form id="contact-form">
     <input type="text" id="contact-first-name" placeholder="First Name" required>
     <input type="text" id="contact-last-name" placeholder="Last Name">
@@ -105,14 +94,42 @@
   <div id="toast"></div>
 </div>
 
+<!-- ✅ Creatio Config -->
+<script>
+var config = {
+    fields: {
+        "FullName": "#contact-first-name",
+        "PhoneNumber": "#contact-number",
+        "Email": "#contact-email-input"
+    },
+    contactFields: {
+        "FullName": "#contact-first-name",
+        "Phone": "#contact-number",
+        "Email": "#contact-email-input"
+    },
+    customFields: {
+        "WebFormId": "a6058324-c3ec-aa2e-add4-12522446fcca"
+    },
+    landingId: "c76b7951-3b99-43d3-9466-01abaf130f43",
+    serviceUrl: "https://184784-crm-bundle.creatio.com/0/ServiceModel/GeneratedObjectWebFormService.svc/SaveWebFormObjectData",
+    redirectUrl: ""
+};
+
+function createObject() {
+    landing.createObjectFromLanding(config);
+}
+
+function initLanding() {
+    landing.initLanding(config);
+}
+
+jQuery(document).ready(initLanding);
+</script>
+
 <script>
 /* ================= CONFIG ================= */
 const WEBHOOK = "https://webhooks.creatio.com/webhooks/a92f744b-4c7c-4fdb-81e9-53cca979a993";
 const GA_ID = "G-DL4C0JH2J1";
-
-const CREATIO_LANDING_ID  = 'c76b7951-3b99-43d3-9466-01abaf130f43';
-const CREATIO_FORM_ID     = 'a6058324-c3ec-aa2e-add4-12522446fcca';
-const CREATIO_ENTITY_NAME = 'FormSubmit';
 
 /* ================= IDENTITY ================= */
 const Identity = {
@@ -204,8 +221,12 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.textContent = "Sending...";
 
     try {
+      // ✅ Creatio official submission
+      createObject();
+
       const clientId = await getClientId();
 
+      // ✅ Webhook submission
       const res = await fetch(WEBHOOK, {
         method: "POST",
         headers: {
@@ -216,13 +237,6 @@ document.addEventListener("DOMContentLoaded", () => {
           LastName: lastName,
           Email: email,
           PhoneNumber: phoneNumber,
-
-          /* 🔥 Creatio Required */
-          EntityName: CREATIO_ENTITY_NAME,
-          FormId: CREATIO_FORM_ID,
-          LandingPageId: CREATIO_LANDING_ID,
-
-          /* 🔥 Tracking */
           TrackingUserId: clientId + ':' + GA_ID,
           PageUrl: window.location.href,
           ReferrerUrl: document.referrer || ''
@@ -231,17 +245,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!res.ok) throw new Error("Failed");
 
-      /* Save identity */
       Identity.save({ email, firstName, clientId });
-
-      /* GA identify */
       identify(email);
-
-      /* 🔥 Creatio identify (LINK VISITOR → CONTACT) */
-      if (typeof ct === "function") {
-        ct('setUserId', clientId + ':' + GA_ID);
-        ct('identify', { email: email });
-      }
 
       track("lead_created", {
         method: "web_form",
