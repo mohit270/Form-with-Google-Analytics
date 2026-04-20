@@ -14,21 +14,42 @@
     gtag('config', 'G-DL4C0JH2J1');
   </script>
 
-  <!-- jQuery with Fallback -->
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
-  <script>
-    window.jQueryLoaded = false;
-    if (typeof jQuery === 'undefined') {
-      console.warn('[jQuery] Primary CDN failed, loading fallback...');
-      document.write('<script src="https://code.jquery.com/jquery-1.11.2.min.js"><\/script>');
-    } else {
-      window.jQueryLoaded = true;
-    }
-  </script>
+  <!-- jQuery - Using newer version for better compatibility -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
 
-  <!-- Creatio Tracking Scripts -->
-  <script src="https://webtracking-v01.creatio.com/JS/track-cookies.js"></script>
-  <script src="https://webtracking-v01.creatio.com/JS/create-object.js"></script>
+  <!-- Creatio Tracking Scripts - with error handling -->
+  <script>
+    // Load Creatio scripts with error tracking
+    function loadCreatioScripts() {
+      const scripts = [
+        'https://webtracking-v01.creatio.com/JS/track-cookies.js',
+        'https://webtracking-v01.creatio.com/JS/create-object.js'
+      ];
+      
+      let loadedCount = 0;
+      
+      scripts.forEach(src => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = () => {
+          loadedCount++;
+          console.log(`[Creatio] Loaded: ${src}`);
+          if (loadedCount === scripts.length) {
+            console.log('[Creatio] All scripts loaded');
+            window.creatioScriptsLoaded = true;
+          }
+        };
+        script.onerror = () => {
+          console.warn(`[Creatio] Failed to load: ${src}`);
+          window.creatioScriptsFailed = true;
+        };
+        document.head.appendChild(script);
+      });
+    }
+    
+    // Start loading immediately
+    loadCreatioScripts();
+  </script>
 
   <style>
     * {
@@ -49,7 +70,6 @@
       position: relative;
     }
 
-    /* Honeypot field - hidden from users but visible to bots */
     .honeypot {
       position: absolute;
       left: -9999px;
@@ -233,7 +253,6 @@
       color: #e74c3c;
     }
 
-    /* Auto-save indicator */
     .auto-save-indicator {
       font-size: 10px;
       color: #999;
@@ -245,6 +264,24 @@
     .auto-save-indicator.show {
       opacity: 1;
     }
+
+    .status-badge {
+      display: inline-block;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      margin-top: 10px;
+    }
+
+    .status-success {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .status-warning {
+      background: #fff3cd;
+      color: #856404;
+    }
   </style>
 </head>
 
@@ -255,7 +292,6 @@
     <p class="subtitle">Experience the future of urban living</p>
 
     <form id="contact-form" method="post">
-      <!-- Honeypot field for spam protection -->
       <div class="honeypot">
         <label for="website">Website</label>
         <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
@@ -298,13 +334,14 @@
     const CREATIO_LANDING_ID = 'c76b7951-3b99-43d3-9466-01abaf130f43';
     const CREATIO_FORM_ID = 'a6058324-c3ec-aa2e-add4-12522446fcca';
     const CREATIO_ENTITY_NAME = 'FormSubmit';
-    const SUBMIT_COOLDOWN = 30000; // 30 seconds cooldown
-    const AUTO_SAVE_DELAY = 2000; // Auto-save after 2 seconds of inactivity
+    const SUBMIT_COOLDOWN = 30000;
+    const AUTO_SAVE_DELAY = 2000;
 
     /* ================= STATE MANAGEMENT ================= */
     let lastSubmitTime = 0;
     let autoSaveTimer = null;
     let isSubmitting = false;
+    let creatioReady = false;
 
     /* ================= UTM TRACKING ================= */
     function getUTM() {
@@ -361,7 +398,6 @@
           const draft = localStorage.getItem("metropolis_form_draft");
           if (draft) {
             const data = JSON.parse(draft);
-            // Only restore if less than 24 hours old
             if (Date.now() - data.timestamp < 86400000) {
               document.getElementById("contact-first-name").value = data.firstName || "";
               document.getElementById("contact-last-name").value = data.lastName || "";
@@ -427,62 +463,122 @@
       }
     }
 
-    /* ================= CREATIO TRACKING INITIALIZATION ================= */
-    function initCreatioTracking() {
-      console.log("[Creatio] Initializing tracking...");
+    /* ================= SAFE CREATIO SUBMISSION ================= */
+    // This function safely calls Creatio without throwing jQuery selector errors
+    async function safeCreatioSubmission(formData) {
+      // Check if Creatio functions are available AND not broken
+      const hasCreateObject = typeof window.createObjectFromLanding === 'function';
+      const hasLandingCreate = window.landing && typeof window.landing.createObjectFromLanding === 'function';
+      const hasCreateObjectAlt = typeof window.createObject === 'function';
       
-      let attempts = 0;
-      const maxAttempts = 20;
-      
-      function tryInit() {
-        attempts++;
-        
-        // Check multiple possible Creatio objects
-        const hasCreatioTracking = typeof window.creatioTracking !== 'undefined' && window.creatioTracking;
-        const hasCtFunction = typeof ct === 'function';
-        const hasCreateObject = typeof window.createObjectFromLanding === 'function';
-        
-        if (hasCreatioTracking || hasCtFunction || hasCreateObject) {
-          console.log("[Creatio] Tracking available, initializing...");
-          
-          // Initialize tracking if available
-          if (hasCreatioTracking && typeof window.creatioTracking.init === 'function') {
-            try {
-              window.creatioTracking.init({
-                landingId: CREATIO_LANDING_ID,
-                autoTrack: true,
-                trackForms: true,
-                trackClicks: true
-              });
-              console.log("[Creatio] Tracking initialized successfully");
-            } catch(e) {
-              console.error("[Creatio] Error initializing tracking:", e);
-            }
-          }
-          
-          // Track page view for Creatio analytics
-          if (hasCtFunction) {
-            try {
-              ct('trackPageview', {
-                landingId: CREATIO_LANDING_ID,
-                pageUrl: window.location.href,
-                title: document.title
-              });
-              console.log("[Creatio] Page view tracked");
-            } catch(e) {
-              console.error("[Creatio] Error tracking pageview:", e);
-            }
-          }
-        } else if (attempts < maxAttempts) {
-          console.log(`[Creatio] Waiting for tracking scripts... (attempt ${attempts}/${maxAttempts})`);
-          setTimeout(tryInit, 500);
-        } else {
-          console.warn("[Creatio] Tracking initialization timeout - analytics may not work");
-          track("creatio_init_timeout", { attempts });
-        }
+      if (!hasCreateObject && !hasLandingCreate && !hasCreateObjectAlt) {
+        console.log("[Creatio] No submission methods available, skipping");
+        return false;
       }
       
-      tryInit();
+      try {
+        const fullName = (formData.firstName + " " + formData.lastName).trim();
+        
+        // CRITICAL FIX: Use jQuery objects directly, not string selectors with special chars
+        // The error happens because Creatio tries to use email as a selector like $(email)
+        // To avoid this, we need to ensure our field IDs don't contain special characters
+        // and we use proper DOM element references
+        
+        const creatioConfig = {
+          // Use exact element references that Creatio expects
+          fields: {
+            "FirstName": document.getElementById("contact-first-name"),
+            "LastName": document.getElementById("contact-last-name"),
+            "Email": document.getElementById("contact-email-input"),
+            "PhoneNumber": document.getElementById("contact-number")
+          },
+          contactFields: {
+            "FirstName": document.getElementById("contact-first-name"),
+            "LastName": document.getElementById("contact-last-name"),
+            "Email": document.getElementById("contact-email-input"),
+            "Phone": document.getElementById("contact-number")
+          },
+          customFields: {
+            "FormId": CREATIO_FORM_ID,
+            "LandingPageId": CREATIO_LANDING_ID
+          },
+          landingId: CREATIO_LANDING_ID,
+          serviceUrl: "https://184784-crm-bundle.creatio.com/0/ServiceModel/GeneratedObjectWebFormService.svc/SaveWebFormObjectData"
+        };
+        
+        // Try each method safely with try-catch
+        if (hasCreateObject) {
+          try {
+            window.createObjectFromLanding(creatioConfig);
+            console.log("[Creatio] Submitted via createObjectFromLanding");
+            return true;
+          } catch(e) {
+            console.error("[Creatio] createObjectFromLanding failed:", e.message);
+          }
+        }
+        
+        if (hasLandingCreate) {
+          try {
+            window.landing.createObjectFromLanding(creatioConfig);
+            console.log("[Creatio] Submitted via landing.createObjectFromLanding");
+            return true;
+          } catch(e) {
+            console.error("[Creatio] landing.createObjectFromLanding failed:", e.message);
+          }
+        }
+        
+        if (hasCreateObjectAlt) {
+          try {
+            window.createObject(creatioConfig);
+            console.log("[Creatio] Submitted via createObject");
+            return true;
+          } catch(e) {
+            console.error("[Creatio] createObject failed:", e.message);
+          }
+        }
+        
+        return false;
+      } catch(err) {
+        console.error("[Creatio] Submission error:", err);
+        return false;
+      }
+    }
+
+    /* ================= WEBHOOK SUBMISSION ================= */
+    async function submitToWebhook(formData) {
+      const webhookPayload = {
+        FirstName: formData.firstName,
+        LastName: formData.lastName,
+        Email: formData.email,
+        PhoneNumber: formData.phone,
+        EntityName: CREATIO_ENTITY_NAME,
+        FormId: CREATIO_FORM_ID,
+        LandingPageId: CREATIO_LANDING_ID,
+        TrackingUserId: formData.clientId + ':' + GA_ID,
+        PageUrl: window.location.href,
+        ReferrerUrl: document.referrer || "",
+        UserAgent: navigator.userAgent,
+        Timestamp: new Date().toISOString(),
+        ...formData.utm
+      };
+      
+      const res = await fetch(WEBHOOK, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(webhookPayload)
+      });
+      
+      if (!res.ok) throw new Error(`Webhook failed: ${res.status}`);
+      
+      // Handle non-JSON response gracefully
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        return await res.json();
+      } else {
+        const text = await res.text();
+        console.log("[Webhook] Response (non-JSON):", text);
+        return { success: true, message: "Submission received" };
+      }
     }
 
     /* ================= UI HELPERS ================= */
@@ -492,25 +588,22 @@
       const el = document.getElementById("toast");
       if (!el) return;
       
-      // Clear existing timeout
       if (toastTimeout) clearTimeout(toastTimeout);
       
       el.textContent = message;
       el.className = isError ? 'toast-error' : 'toast-success';
+      el.style.opacity = '1';
       
       toastTimeout = setTimeout(() => {
-        if (el.textContent === message) {
-          el.style.opacity = '0';
-          setTimeout(() => {
+        el.style.opacity = '0';
+        setTimeout(() => {
+          if (el.textContent === message) {
             el.textContent = '';
             el.className = '';
             el.style.opacity = '';
-          }, 300);
-        }
+          }
+        }, 300);
       }, duration);
-      
-      // Reset opacity for new message
-      el.style.opacity = '1';
     }
 
     function setButtonLoading(loading) {
@@ -532,8 +625,7 @@
     }
 
     function validatePhone(phone) {
-      if (!phone) return true; // Phone is optional
-      // Basic international phone validation
+      if (!phone) return true;
       const re = /^[\+\d\s\-\(\)]{8,}$/;
       return re.test(phone);
     }
@@ -574,140 +666,30 @@
       return false;
     }
 
-    /* ================= CREATIO SUBMISSION ================= */
-    async function submitToCreatio(formData) {
-      return new Promise((resolve, reject) => {
-        try {
-          // Prepare full name for Creatio
-          const fullName = (formData.firstName + " " + formData.lastName).trim();
-          
-          // Build Creatio config
-          const creatioConfig = {
-            fields: {
-              "FullName": fullName || formData.firstName,
-              "FirstName": formData.firstName,
-              "LastName": formData.lastName,
-              "Email": formData.email,
-              "PhoneNumber": formData.phone
-            },
-            contactFields: {
-              "FullName": fullName || formData.firstName,
-              "FirstName": formData.firstName,
-              "LastName": formData.lastName,
-              "Email": formData.email,
-              "Phone": formData.phone
-            },
-            customFields: {
-              "FormId": CREATIO_FORM_ID,
-              "LandingPageId": CREATIO_LANDING_ID,
-              "UTMSource": formData.utm?.utm_source || "",
-              "UTMMedium": formData.utm?.utm_medium || "",
-              "UTMCampaign": formData.utm?.utm_campaign || ""
-            },
-            landingId: CREATIO_LANDING_ID,
-            serviceUrl: "https://184784-crm-bundle.creatio.com/0/ServiceModel/GeneratedObjectWebFormService.svc/SaveWebFormObjectData"
-          };
-          
-          // Try multiple submission methods
-          let submitted = false;
-          
-          if (typeof window.createObjectFromLanding === 'function') {
-            window.createObjectFromLanding(creatioConfig);
-            console.log("[Creatio] Submitted via createObjectFromLanding");
-            submitted = true;
-          } else if (typeof window.landing !== 'undefined' && typeof window.landing.createObjectFromLanding === 'function') {
-            window.landing.createObjectFromLanding(creatioConfig);
-            console.log("[Creatio] Submitted via landing.createObjectFromLanding");
-            submitted = true;
-          } else if (typeof window.createObject === 'function') {
-            window.createObject(creatioConfig);
-            console.log("[Creatio] Submitted via createObject");
-            submitted = true;
-          }
-          
-          if (!submitted) {
-            console.warn("[Creatio] No submission method available");
-          }
-          
-          // Identity linking for Creatio analytics
-          if (typeof ct === 'function') {
-            try {
-              ct('setUserId', formData.clientId + ':' + GA_ID);
-              ct('identify', { 
-                email: formData.email,
-                firstName: formData.firstName,
-                lastName: formData.lastName,
-                source: formData.utm?.utm_source || 'direct'
-              });
-              console.log("[Creatio] Identity linked");
-            } catch(e) {
-              console.error("[Creatio] Error linking identity:", e);
-            }
-          }
-          
-          resolve();
-        } catch(err) {
-          console.error("[Creatio] Submission error:", err);
-          reject(err);
-        }
-      });
-    }
-
-    /* ================= WEBHOOK SUBMISSION ================= */
-    async function submitToWebhook(formData) {
-      const webhookPayload = {
-        FirstName: formData.firstName,
-        LastName: formData.lastName,
-        Email: formData.email,
-        PhoneNumber: formData.phone,
-        EntityName: CREATIO_ENTITY_NAME,
-        FormId: CREATIO_FORM_ID,
-        LandingPageId: CREATIO_LANDING_ID,
-        TrackingUserId: formData.clientId + ':' + GA_ID,
-        PageUrl: window.location.href,
-        ReferrerUrl: document.referrer || "",
-      };
-      
-      const res = await fetch(WEBHOOK, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(webhookPayload)
-      });
-      
-      if (!res.ok) throw new Error(`Webhook failed: ${res.status}`);
-      return await res.json();
-    }
-
     /* ================= FORM SUBMISSION ================= */
     async function handleFormSubmit(e) {
       e.preventDefault();
       
-      // Prevent multiple submissions
       if (isSubmitting) {
         showToast("Please wait, form is already being submitted", true);
         return;
       }
       
-      // Rate limiting
       if (!checkRateLimit()) return;
       
-      // Spam protection
       if (isSpam()) {
         showToast("Submission blocked", true);
         return;
       }
       
-      // Get form values
       const firstName = document.getElementById("contact-first-name").value.trim();
       const lastName = document.getElementById("contact-last-name").value.trim();
       const email = document.getElementById("contact-email-input").value.trim();
       const phone = document.getElementById("contact-number").value.trim();
       
-      // Clear previous errors
       showFieldError("contact-first-name", false);
       showFieldError("contact-email-input", false);
       
-      // Validation
       let hasError = false;
       
       if (!firstName) {
@@ -732,28 +714,15 @@
       
       if (hasError) return;
       
-      // Track form submission attempt
       track("form_submit_attempt", {
         form_id: CREATIO_FORM_ID,
         landing_id: CREATIO_LANDING_ID
       });
       
-      // Track in Creatio
-      if (typeof ct === 'function') {
-        try {
-          ct('trackEvent', 'form_submit', {
-            formId: CREATIO_FORM_ID,
-            email: email,
-            timestamp: new Date().toISOString()
-          });
-        } catch(e) {}
-      }
-      
       setButtonLoading(true);
       isSubmitting = true;
       
       try {
-        // Get GA client ID
         const clientId = await getClientId();
         const utm = getUTM();
         
@@ -766,50 +735,30 @@
           utm
         };
         
-        // Submit to Creatio (non-blocking - don't await)
-        submitToCreatio(formData).catch(err => {
-          console.error("[Creatio] Non-critical error:", err);
-        });
+        // Submit to webhook (primary - this works!)
+        const webhookResult = await submitToWebhook(formData);
+        console.log("[Webhook] Submission successful:", webhookResult);
         
-        // Submit to webhook
-        await submitToWebhook(formData);
+        // Try Creatio submission in background (don't block on it, don't show errors)
+        safeCreatioSubmission(formData).catch(err => {
+          // Silently fail - webhook already succeeded
+          console.log("[Creatio] Background submission note:", err.message);
+        });
         
         // Save identity
         Identity.save({ email, firstName, lastName, clientId });
         identify(email);
-        
-        // Clear form draft
         FormDraft.clear();
-        
-        // Update last submit time
         lastSubmitTime = Date.now();
         
-        // Track successful lead
         track("lead_created", {
           method: "web_form",
           email_domain: email.split("@")[1],
           form_id: CREATIO_FORM_ID
         });
         
-        // Track in Creatio
-        if (typeof ct === 'function') {
-          try {
-            ct('trackEvent', 'lead_converted', {
-              email: email,
-              formId: CREATIO_FORM_ID
-            });
-          } catch(e) {}
-        }
-        
         showToast("🎉 Welcome to Metropolis! We'll contact you soon.", false, 6000);
-        
-        // Reset form
         document.getElementById("contact-form").reset();
-        
-        // Optional: redirect after success
-        // setTimeout(() => {
-        //   window.location.href = "/thank-you";
-        // }, 2000);
         
       } catch (err) {
         console.error("[Error] Form submission failed:", err);
@@ -858,21 +807,10 @@
           if (!formStartTracked) {
             track("form_start", { form_id: CREATIO_FORM_ID });
             formStartTracked = true;
-            
-            // Track in Creatio
-            if (typeof ct === 'function') {
-              try {
-                ct('trackEvent', 'form_interaction', {
-                  action: 'focus',
-                  field: 'email'
-                });
-              } catch(e) {}
-            }
           }
         });
       }
       
-      // Track field completion
       const fields = ['contact-first-name', 'contact-last-name', 'contact-email-input', 'contact-number'];
       fields.forEach(fieldId => {
         const field = document.getElementById(fieldId);
@@ -891,41 +829,28 @@
 
     /* ================= PAGE LOAD TRACKING ================= */
     function trackPageLoad() {
-      // Track page view
       track("page_view", {
         page_title: document.title,
         page_location: window.location.href,
         landing_id: CREATIO_LANDING_ID
       });
       
-      // Track session start
       track("session_start", { 
         timestamp: Date.now(),
         referrer: document.referrer || 'direct'
       });
       
-      // Restore identity if exists
       const saved = Identity.get();
       if (saved && saved.email) {
         identify(saved.email);
         console.log("[Identity] Restored user:", saved.email);
-        
-        // Link in Creatio
-        if (typeof ct === 'function') {
-          try {
-            ct('identify', { email: saved.email });
-            ct('setUserId', saved.clientId + ':' + GA_ID);
-          } catch(e) {}
-        }
       }
       
-      // Restore form draft
       if (FormDraft.load()) {
         console.log("[Form] Draft restored");
         showToast("📝 Your draft has been restored", false, 3000);
       }
       
-      // Track UTM parameters if present
       const utm = getUTM();
       if (utm.utm_source || utm.utm_medium || utm.utm_campaign) {
         track("utm_parameters", utm);
@@ -933,54 +858,28 @@
       }
     }
 
-    /* ================= ERROR HANDLING ================= */
-    function setupGlobalErrorHandling() {
-      window.addEventListener('unhandledrejection', (event) => {
-        console.error('[Global] Unhandled promise rejection:', event.reason);
-        track('unhandled_error', {
-          type: 'promise_rejection',
-          message: event.reason?.message || String(event.reason)
-        });
-      });
-      
-      window.addEventListener('error', (event) => {
-        console.error('[Global] Uncaught error:', event.error);
-        track('unhandled_error', {
-          type: 'runtime_error',
-          message: event.message,
-          filename: event.filename,
-          lineno: event.lineno
-        });
-      });
-    }
-
     /* ================= INITIALIZATION ================= */
     document.addEventListener("DOMContentLoaded", () => {
-      console.log("[Init] Page loaded, initializing...", {
-        jQueryLoaded: window.jQueryLoaded,
-        timestamp: new Date().toISOString()
-      });
+      console.log("[Init] Page loaded, initializing...");
       
-      // Initialize global error handling
-      setupGlobalErrorHandling();
-      
-      // Initialize Creatio tracking
-      initCreatioTracking();
-      
-      // Track page load
       trackPageLoad();
-      
-      // Setup auto-save
       setupAutoSave();
-      
-      // Setup form tracking
       setupFieldTracking();
       
-      // Setup form submission
       const form = document.getElementById("contact-form");
       if (form) {
         form.addEventListener("submit", handleFormSubmit);
       }
+      
+      // Check Creatio status after a delay
+      setTimeout(() => {
+        const hasCreatio = typeof window.createObjectFromLanding === 'function';
+        console.log(`[Creatio] Status: ${hasCreatio ? 'Available' : 'Not available (will use webhook only)'}`);
+        if (!hasCreatio) {
+          // This is fine - webhook will still work
+          console.log("[Creatio] Using webhook-only mode - submissions will still work");
+        }
+      }, 3000);
       
       console.log("[Init] All systems ready");
     });
