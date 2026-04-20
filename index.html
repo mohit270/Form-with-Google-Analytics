@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Metropolis - Join the Future</title>
+  <title>Metropolis Contact - Smart Landing Page</title>
 
   <!-- GA4 -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-DL4C0JH2J1"></script>
@@ -14,10 +14,19 @@
     gtag('config', 'G-DL4C0JH2J1');
   </script>
 
-  <!-- jQuery - REQUIRED for Creatio -->
+  <!-- jQuery with Fallback -->
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+  <script>
+    window.jQueryLoaded = false;
+    if (typeof jQuery === 'undefined') {
+      console.warn('[jQuery] Primary CDN failed, loading fallback...');
+      document.write('<script src="https://code.jquery.com/jquery-1.11.2.min.js"><\/script>');
+    } else {
+      window.jQueryLoaded = true;
+    }
+  </script>
 
-  <!-- Creatio Scripts -->
+  <!-- Creatio Tracking Scripts -->
   <script src="https://webtracking-v01.creatio.com/JS/track-cookies.js"></script>
   <script src="https://webtracking-v01.creatio.com/JS/create-object.js"></script>
 
@@ -37,6 +46,17 @@
       min-height: 100vh;
       margin: 0;
       padding: 20px;
+      position: relative;
+    }
+
+    /* Honeypot field - hidden from users but visible to bots */
+    .honeypot {
+      position: absolute;
+      left: -9999px;
+      opacity: 0;
+      height: 0;
+      width: 0;
+      overflow: hidden;
     }
 
     .container {
@@ -44,48 +64,61 @@
       padding: 40px;
       border-radius: 20px;
       width: 100%;
-      max-width: 420px;
+      max-width: 400px;
       box-shadow: 0 20px 60px rgba(0,0,0,0.3);
       text-align: center;
+      animation: fadeIn 0.5s ease-in;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     .logo {
-      width: 140px;
-      margin-bottom: 15px;
+      width: 160px;
+      margin-bottom: 20px;
     }
 
     h2 {
-      color: #1a1a2e;
-      margin-bottom: 8px;
-      font-size: 26px;
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 24px;
     }
 
     .subtitle {
       color: #666;
       font-size: 14px;
-      margin-bottom: 30px;
+      margin-bottom: 25px;
     }
 
     .form-group {
-      margin-bottom: 18px;
+      margin-bottom: 15px;
       text-align: left;
+      position: relative;
     }
 
     label {
       display: block;
-      margin-bottom: 6px;
-      color: #333;
+      margin-bottom: 5px;
+      color: #555;
       font-size: 13px;
       font-weight: 500;
     }
 
     input {
       width: 100%;
-      padding: 12px 14px;
-      border-radius: 10px;
-      border: 2px solid #e2e8f0;
+      padding: 12px;
+      border-radius: 8px;
+      border: 2px solid #e0e0e0;
       font-size: 14px;
-      transition: all 0.2s ease;
+      transition: all 0.3s ease;
     }
 
     input:focus {
@@ -94,18 +127,40 @@
       box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
     }
 
+    input.error {
+      border-color: #e74c3c;
+      animation: shake 0.3s ease-in-out;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+
+    .error-message {
+      color: #e74c3c;
+      font-size: 11px;
+      margin-top: 5px;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
     button {
       width: 100%;
       padding: 14px;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: #fff;
       border: none;
-      border-radius: 10px;
+      border-radius: 8px;
       margin-top: 10px;
       cursor: pointer;
-      font-weight: 600;
+      font-weight: bold;
       font-size: 16px;
-      transition: all 0.2s ease;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
     button:hover:not(:disabled) {
@@ -114,28 +169,48 @@
     }
 
     button:disabled {
-      background: #cbd5e0;
+      background: #ccc;
       cursor: not-allowed;
+      transform: none;
     }
 
     #toast {
-      margin-top: 20px;
+      margin-top: 15px;
       font-size: 13px;
-      min-height: 45px;
+      min-height: 40px;
       padding: 10px;
-      border-radius: 10px;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      min-width: 300px;
+      z-index: 1000;
+      animation: slideUp 0.3s ease-out;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
     }
 
     .toast-success {
-      background: #c6f6d5;
-      color: #22543d;
-      border: 1px solid #9ae6b4;
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
     }
 
     .toast-error {
-      background: #fed7d7;
-      color: #742a2a;
-      border: 1px solid #fc8181;
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
     }
 
     .loading-spinner {
@@ -155,259 +230,762 @@
     }
 
     .required {
-      color: #e53e3e;
+      color: #e74c3c;
+    }
+
+    /* Auto-save indicator */
+    .auto-save-indicator {
+      font-size: 10px;
+      color: #999;
+      margin-top: 10px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .auto-save-indicator.show {
+      opacity: 1;
     }
   </style>
 </head>
 
 <body>
   <div class="container">
-    <img src="Metropolis_logo.jpg" alt="Metropolis" class="logo" onerror="this.style.display='none'">
+    <img src="Metropolis_logo.jpg" alt="Metropolis Logo" class="logo" onerror="this.style.display='none'">
     <h2>Join Metropolis</h2>
     <p class="subtitle">Experience the future of urban living</p>
 
-    <form id="contact-form">
+    <form id="contact-form" method="post">
+      <!-- Honeypot field for spam protection -->
+      <div class="honeypot">
+        <label for="website">Website</label>
+        <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+      </div>
+
       <div class="form-group">
         <label>First Name <span class="required">*</span></label>
-        <input type="text" id="contact-first-name" placeholder="Enter your first name">
+        <input type="text" id="contact-first-name" name="FirstName" placeholder="Enter your first name" autocomplete="given-name">
+        <div class="error-message" id="firstNameError">Please enter your first name</div>
       </div>
 
       <div class="form-group">
         <label>Last Name</label>
-        <input type="text" id="contact-last-name" placeholder="Enter your last name">
+        <input type="text" id="contact-last-name" name="LastName" placeholder="Enter your last name" autocomplete="family-name">
       </div>
 
       <div class="form-group">
         <label>Email <span class="required">*</span></label>
-        <input type="email" id="contact-email-input" placeholder="your@email.com">
+        <input type="email" id="contact-email-input" name="Email" placeholder="your@email.com" autocomplete="email">
+        <div class="error-message" id="emailError">Please enter a valid email address</div>
       </div>
 
       <div class="form-group">
         <label>Phone Number</label>
-        <input type="tel" id="contact-number" placeholder="+1 234 567 8900">
+        <input type="tel" id="contact-number" name="Phone" placeholder="+1 234 567 8900" autocomplete="tel">
       </div>
 
       <button type="submit" id="contact-submit-btn">Get Started</button>
     </form>
 
-    <div id="toast"></div>
+    <div class="auto-save-indicator" id="autoSaveIndicator">✓ Draft saved</div>
   </div>
 
+  <div id="toast"></div>
+
   <script>
-    // CONFIGURATION
+    /* ================= CONFIGURATION ================= */
     const WEBHOOK = "https://webhooks.creatio.com/webhooks/a92f744b-4c7c-4fdb-81e9-53cca979a993";
     const GA_ID = "G-DL4C0JH2J1";
     const CREATIO_LANDING_ID = 'c76b7951-3b99-43d3-9466-01abaf130f43';
     const CREATIO_FORM_ID = 'a6058324-c3ec-aa2e-add4-12522446fcca';
     const CREATIO_ENTITY_NAME = 'FormSubmit';
+    const SUBMIT_COOLDOWN = 30000; // 30 seconds cooldown
+    const AUTO_SAVE_DELAY = 2000; // Auto-save after 2 seconds of inactivity
 
-    // UTM TRACKING
+    /* ================= STATE MANAGEMENT ================= */
+    let lastSubmitTime = 0;
+    let autoSaveTimer = null;
+    let isSubmitting = false;
+
+    /* ================= UTM TRACKING ================= */
     function getUTM() {
       const params = new URLSearchParams(window.location.search);
       return {
         utm_source: params.get("utm_source") || "",
         utm_medium: params.get("utm_medium") || "",
-        utm_campaign: params.get("utm_campaign") || ""
+        utm_campaign: params.get("utm_campaign") || "",
+        utm_term: params.get("utm_term") || "",
+        utm_content: params.get("utm_content") || ""
       };
     }
 
-    // GA CLIENT ID
+    /* ================= IDENTITY MANAGEMENT ================= */
+    const Identity = {
+      get: () => {
+        try { 
+          return JSON.parse(localStorage.getItem("metropolis_identity")); 
+        } catch(e) { 
+          return null; 
+        }
+      },
+      save: (data) => {
+        try { 
+          localStorage.setItem("metropolis_identity", JSON.stringify(data)); 
+        } catch(e) {}
+      },
+      clear: () => {
+        try { 
+          localStorage.removeItem("metropolis_identity"); 
+        } catch(e) {}
+      }
+    };
+
+    /* ================= FORM DATA PERSISTENCE ================= */
+    const FormDraft = {
+      save: () => {
+        const formData = {
+          firstName: document.getElementById("contact-first-name").value,
+          lastName: document.getElementById("contact-last-name").value,
+          email: document.getElementById("contact-email-input").value,
+          phone: document.getElementById("contact-number").value,
+          timestamp: Date.now()
+        };
+        try {
+          localStorage.setItem("metropolis_form_draft", JSON.stringify(formData));
+          return true;
+        } catch(e) {
+          return false;
+        }
+      },
+      load: () => {
+        try {
+          const draft = localStorage.getItem("metropolis_form_draft");
+          if (draft) {
+            const data = JSON.parse(draft);
+            // Only restore if less than 24 hours old
+            if (Date.now() - data.timestamp < 86400000) {
+              document.getElementById("contact-first-name").value = data.firstName || "";
+              document.getElementById("contact-last-name").value = data.lastName || "";
+              document.getElementById("contact-email-input").value = data.email || "";
+              document.getElementById("contact-number").value = data.phone || "";
+              return true;
+            }
+          }
+        } catch(e) {}
+        return false;
+      },
+      clear: () => {
+        try {
+          localStorage.removeItem("metropolis_form_draft");
+        } catch(e) {}
+      }
+    };
+
+    /* ================= GA CLIENT ID ================= */
     function getClientId() {
       return new Promise((resolve) => {
         if (typeof gtag !== "function") return resolve("");
-        gtag('get', GA_ID, 'client_id', (clientId) => resolve(clientId || ""));
+        try {
+          gtag('get', GA_ID, 'client_id', (clientId) => resolve(clientId || ""));
+        } catch(e) {
+          console.error("[GA4] Error getting client ID:", e);
+          resolve("");
+        }
       });
     }
 
-    // TRACKING
+    /* ================= TRACKING FUNCTIONS ================= */
     function track(event, params = {}) {
       if (typeof gtag === "function") {
-        gtag('event', event, params);
-        console.log(`[GA4] Tracked: ${event}`, params);
+        try {
+          gtag('event', event, params);
+          console.log(`[GA4] Tracked: ${event}`, params);
+        } catch(e) {
+          console.error(`[GA4] Error tracking ${event}:`, e);
+        }
       }
     }
 
     function generateUserId(email) {
-      return btoa(encodeURIComponent(email));
+      try {
+        return btoa(encodeURIComponent(email));
+      } catch(e) {
+        return email.replace(/[^a-zA-Z0-9]/g, '_');
+      }
     }
 
     function identify(email) {
       if (typeof gtag !== "function") return;
-      gtag('config', GA_ID, {
-        user_id: generateUserId(email),
-        send_page_view: false
-      });
-    }
-
-    // UI HELPERS
-    function toast(msg, error = false) {
-      const el = document.getElementById("toast");
-      el.style.color = error ? "#742a2a" : "#22543d";
-      el.style.background = error ? "#fed7d7" : "#c6f6d5";
-      el.style.border = error ? "1px solid #fc8181" : "1px solid #9ae6b4";
-      el.textContent = msg;
-      setTimeout(() => {
-        if (el.textContent === msg) {
-          el.textContent = "";
-          el.style.background = "";
-          el.style.border = "";
-        }
-      }, 5000);
-    }
-
-    // CREATIO CONFIGURATION (matches your original working code)
-    var creatioConfig = {
-      fields: {
-        "FullName": "#contact-first-name",
-        "PhoneNumber": "#contact-number",
-        "Email": "#contact-email-input"
-      },
-      contactFields: {
-        "FullName": "#contact-first-name",
-        "Phone": "#contact-number",
-        "Email": "#contact-email-input"
-      },
-      customFields: {
-        "FormId": "a6058324-c3ec-aa2e-add4-12522446fcca"
-      },
-      landingId: "c76b7951-3b43-43d3-9466-01abaf130f43",
-      serviceUrl: "https://184784-crm-bundle.creatio.com/0/ServiceModel/GeneratedObjectWebFormService.svc/SaveWebFormObjectData"
-    };
-
-    function createObject() {
-      if (typeof window.createObjectFromLanding === 'function') {
-        window.createObjectFromLanding(creatioConfig);
-        console.log("[Creatio] createObjectFromLanding called");
-      } else if (typeof window.landing !== 'undefined' && typeof window.landing.createObjectFromLanding === 'function') {
-        window.landing.createObjectFromLanding(creatioConfig);
-        console.log("[Creatio] landing.createObjectFromLanding called");
-      } else {
-        console.error("[Creatio] No submission function available");
-        throw new Error("Creatio function not available");
+      try {
+        const userId = generateUserId(email);
+        gtag('config', GA_ID, {
+          user_id: userId,
+          send_page_view: false
+        });
+        console.log(`[GA4] Identified user: ${userId}`);
+      } catch(e) {
+        console.error("[GA4] Error identifying user:", e);
       }
     }
 
-    function initLanding() {
-      if (typeof window.initLanding === 'function') {
-        window.initLanding(creatioConfig);
-        console.log("[Creatio] initLanding called");
-      }
-      if (typeof ct === "function") {
-        ct('init');
-        console.log("[Creatio] ct initialized");
-      }
-    }
-
-    // MAIN FORM HANDLER
-    document.addEventListener("DOMContentLoaded", () => {
-      console.log("[Init] Page loaded");
+    /* ================= CREATIO TRACKING INITIALIZATION ================= */
+    function initCreatioTracking() {
+      console.log("[Creatio] Initializing tracking...");
       
-      // Initialize Creatio
-      initLanding();
+      let attempts = 0;
+      const maxAttempts = 20;
       
-      // Track page view
-      track("page_view");
-      track("session_start", { timestamp: Date.now() });
-      
-      const form = document.getElementById("contact-form");
-      const btn = document.getElementById("contact-submit-btn");
-      
-      // Track form start
-      document.getElementById("contact-email-input").addEventListener("focus", () => {
-        track("form_start");
-      });
-      
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
+      function tryInit() {
+        attempts++;
         
-        if (btn.disabled) return;
+        // Check multiple possible Creatio objects
+        const hasCreatioTracking = typeof window.creatioTracking !== 'undefined' && window.creatioTracking;
+        const hasCtFunction = typeof ct === 'function';
+        const hasCreateObject = typeof window.createObjectFromLanding === 'function';
         
-        const firstName = document.getElementById("contact-first-name").value.trim();
-        const lastName = document.getElementById("contact-last-name").value.trim();
-        const email = document.getElementById("contact-email-input").value.trim();
-        const phone = document.getElementById("contact-number").value.trim();
-        
-        // Validation
-        if (!firstName || !email) {
-          toast("Please fill required fields", true);
-          return;
-        }
-        
-        if (!email.includes("@")) {
-          toast("Please enter a valid email", true);
-          return;
-        }
-        
-        track("form_submit_attempt");
-        
-        btn.disabled = true;
-        btn.innerHTML = '<span class="loading-spinner"></span> Sending...';
-        
-        try {
-          // Combine first and last name for Creatio's FullName field
-          const fullName = (firstName + " " + lastName).trim();
-          document.getElementById("contact-first-name").value = fullName;
+        if (hasCreatioTracking || hasCtFunction || hasCreateObject) {
+          console.log("[Creatio] Tracking available, initializing...");
           
-          // Submit to Creatio
-          createObject();
-          
-          // Get client ID for tracking
-          const clientId = await getClientId();
-          const utm = getUTM();
-          
-          // Link identity for analytics
-          if (typeof ct === "function") {
-            ct('setUserId', clientId + ':' + GA_ID);
-            ct('identify', { email: email });
+          // Initialize tracking if available
+          if (hasCreatioTracking && typeof window.creatioTracking.init === 'function') {
+            try {
+              window.creatioTracking.init({
+                landingId: CREATIO_LANDING_ID,
+                autoTrack: true,
+                trackForms: true,
+                trackClicks: true
+              });
+              console.log("[Creatio] Tracking initialized successfully");
+            } catch(e) {
+              console.error("[Creatio] Error initializing tracking:", e);
+            }
           }
           
-          // Send to webhook
-          const res = await fetch(WEBHOOK, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              FirstName: firstName,
-              LastName: lastName,
-              Email: email,
-              PhoneNumber: phone,
-              EntityName: CREATIO_ENTITY_NAME,
-              FormId: CREATIO_FORM_ID,
-              LandingPageId: CREATIO_LANDING_ID,
-              TrackingUserId: clientId + ':' + GA_ID,
-              PageUrl: window.location.href,
-              ReferrerUrl: document.referrer || "",
-            })
-          });
+          // Track page view for Creatio analytics
+          if (hasCtFunction) {
+            try {
+              ct('trackPageview', {
+                landingId: CREATIO_LANDING_ID,
+                pageUrl: window.location.href,
+                title: document.title
+              });
+              console.log("[Creatio] Page view tracked");
+            } catch(e) {
+              console.error("[Creatio] Error tracking pageview:", e);
+            }
+          }
+        } else if (attempts < maxAttempts) {
+          console.log(`[Creatio] Waiting for tracking scripts... (attempt ${attempts}/${maxAttempts})`);
+          setTimeout(tryInit, 500);
+        } else {
+          console.warn("[Creatio] Tracking initialization timeout - analytics may not work");
+          track("creatio_init_timeout", { attempts });
+        }
+      }
+      
+      tryInit();
+    }
+
+    /* ================= UI HELPERS ================= */
+    let toastTimeout = null;
+    
+    function showToast(message, isError = false, duration = 5000) {
+      const el = document.getElementById("toast");
+      if (!el) return;
+      
+      // Clear existing timeout
+      if (toastTimeout) clearTimeout(toastTimeout);
+      
+      el.textContent = message;
+      el.className = isError ? 'toast-error' : 'toast-success';
+      
+      toastTimeout = setTimeout(() => {
+        if (el.textContent === message) {
+          el.style.opacity = '0';
+          setTimeout(() => {
+            el.textContent = '';
+            el.className = '';
+            el.style.opacity = '';
+          }, 300);
+        }
+      }, duration);
+      
+      // Reset opacity for new message
+      el.style.opacity = '1';
+    }
+
+    function setButtonLoading(loading) {
+      const btn = document.getElementById("contact-submit-btn");
+      if (!btn) return;
+      
+      if (loading) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="loading-spinner"></span> Processing...';
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = 'Get Started';
+      }
+    }
+
+    function validateEmail(email) {
+      const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      return re.test(email);
+    }
+
+    function validatePhone(phone) {
+      if (!phone) return true; // Phone is optional
+      // Basic international phone validation
+      const re = /^[\+\d\s\-\(\)]{8,}$/;
+      return re.test(phone);
+    }
+
+    function showFieldError(fieldId, show) {
+      const field = document.getElementById(fieldId);
+      const errorEl = document.getElementById(`${fieldId}Error`);
+      if (!field || !errorEl) return;
+      
+      if (show) {
+        field.classList.add('error');
+        errorEl.classList.add('show');
+      } else {
+        field.classList.remove('error');
+        errorEl.classList.remove('show');
+      }
+    }
+
+    /* ================= RATE LIMITING ================= */
+    function checkRateLimit() {
+      const now = Date.now();
+      if (now - lastSubmitTime < SUBMIT_COOLDOWN) {
+        const remainingSeconds = Math.ceil((SUBMIT_COOLDOWN - (now - lastSubmitTime)) / 1000);
+        showToast(`Please wait ${remainingSeconds} seconds before submitting again`, true);
+        return false;
+      }
+      return true;
+    }
+
+    /* ================= SPAM PROTECTION ================= */
+    function isSpam() {
+      const honeypot = document.getElementById("website");
+      if (honeypot && honeypot.value) {
+        console.warn("[Security] Honeypot triggered - possible bot");
+        track("spam_blocked", { reason: "honeypot" });
+        return true;
+      }
+      return false;
+    }
+
+    /* ================= CREATIO SUBMISSION ================= */
+    async function submitToCreatio(formData) {
+      return new Promise((resolve, reject) => {
+        try {
+          // Prepare full name for Creatio
+          const fullName = (formData.firstName + " " + formData.lastName).trim();
           
-          if (!res.ok) throw new Error("Webhook failed");
+          // Build Creatio config
+          const creatioConfig = {
+            fields: {
+              "FullName": fullName || formData.firstName,
+              "FirstName": formData.firstName,
+              "LastName": formData.lastName,
+              "Email": formData.email,
+              "PhoneNumber": formData.phone
+            },
+            contactFields: {
+              "FullName": fullName || formData.firstName,
+              "FirstName": formData.firstName,
+              "LastName": formData.lastName,
+              "Email": formData.email,
+              "Phone": formData.phone
+            },
+            customFields: {
+              "FormId": CREATIO_FORM_ID,
+              "LandingPageId": CREATIO_LANDING_ID,
+              "UTMSource": formData.utm?.utm_source || "",
+              "UTMMedium": formData.utm?.utm_medium || "",
+              "UTMCampaign": formData.utm?.utm_campaign || ""
+            },
+            landingId: CREATIO_LANDING_ID,
+            serviceUrl: "https://184784-crm-bundle.creatio.com/0/ServiceModel/GeneratedObjectWebFormService.svc/SaveWebFormObjectData"
+          };
           
-          // Save identity
-          try {
-            localStorage.setItem("metropolis_identity", JSON.stringify({ email, firstName, clientId }));
-          } catch(e) {}
+          // Try multiple submission methods
+          let submitted = false;
           
-          identify(email);
+          if (typeof window.createObjectFromLanding === 'function') {
+            window.createObjectFromLanding(creatioConfig);
+            console.log("[Creatio] Submitted via createObjectFromLanding");
+            submitted = true;
+          } else if (typeof window.landing !== 'undefined' && typeof window.landing.createObjectFromLanding === 'function') {
+            window.landing.createObjectFromLanding(creatioConfig);
+            console.log("[Creatio] Submitted via landing.createObjectFromLanding");
+            submitted = true;
+          } else if (typeof window.createObject === 'function') {
+            window.createObject(creatioConfig);
+            console.log("[Creatio] Submitted via createObject");
+            submitted = true;
+          }
           
-          track("lead_created", {
-            method: "web_form",
-            email_domain: email.split("@")[1]
-          });
+          if (!submitted) {
+            console.warn("[Creatio] No submission method available");
+          }
           
-          toast("🎉 Welcome to Metropolis!");
-          form.reset();
+          // Identity linking for Creatio analytics
+          if (typeof ct === 'function') {
+            try {
+              ct('setUserId', formData.clientId + ':' + GA_ID);
+              ct('identify', { 
+                email: formData.email,
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+                source: formData.utm?.utm_source || 'direct'
+              });
+              console.log("[Creatio] Identity linked");
+            } catch(e) {
+              console.error("[Creatio] Error linking identity:", e);
+            }
+          }
           
-          // Restore the first name field (since we changed it)
-          document.getElementById("contact-first-name").value = "";
-          
-        } catch (err) {
-          console.error("[Error]", err);
-          toast("Network error. Please try again.", true);
-          track("form_submit_error", { error: err.message });
-        } finally {
-          btn.disabled = false;
-          btn.innerHTML = "Get Started";
+          resolve();
+        } catch(err) {
+          console.error("[Creatio] Submission error:", err);
+          reject(err);
         }
       });
+    }
+
+    /* ================= WEBHOOK SUBMISSION ================= */
+    async function submitToWebhook(formData) {
+      const webhookPayload = {
+        FirstName: formData.firstName,
+        LastName: formData.lastName,
+        Email: formData.email,
+        PhoneNumber: formData.phone,
+        EntityName: CREATIO_ENTITY_NAME,
+        FormId: CREATIO_FORM_ID,
+        LandingPageId: CREATIO_LANDING_ID,
+        TrackingUserId: formData.clientId + ':' + GA_ID,
+        PageUrl: window.location.href,
+        ReferrerUrl: document.referrer || "",
+        UserAgent: navigator.userAgent,
+        Timestamp: new Date().toISOString(),
+        ...formData.utm
+      };
+      
+      const res = await fetch(WEBHOOK, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(webhookPayload)
+      });
+      
+      if (!res.ok) throw new Error(`Webhook failed: ${res.status}`);
+      return await res.json();
+    }
+
+    /* ================= FORM SUBMISSION ================= */
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+      
+      // Prevent multiple submissions
+      if (isSubmitting) {
+        showToast("Please wait, form is already being submitted", true);
+        return;
+      }
+      
+      // Rate limiting
+      if (!checkRateLimit()) return;
+      
+      // Spam protection
+      if (isSpam()) {
+        showToast("Submission blocked", true);
+        return;
+      }
+      
+      // Get form values
+      const firstName = document.getElementById("contact-first-name").value.trim();
+      const lastName = document.getElementById("contact-last-name").value.trim();
+      const email = document.getElementById("contact-email-input").value.trim();
+      const phone = document.getElementById("contact-number").value.trim();
+      
+      // Clear previous errors
+      showFieldError("contact-first-name", false);
+      showFieldError("contact-email-input", false);
+      
+      // Validation
+      let hasError = false;
+      
+      if (!firstName) {
+        showFieldError("contact-first-name", true);
+        hasError = true;
+      }
+      
+      if (!email) {
+        showFieldError("contact-email-input", true);
+        document.getElementById("emailError").textContent = "Please enter your email address";
+        hasError = true;
+      } else if (!validateEmail(email)) {
+        showFieldError("contact-email-input", true);
+        document.getElementById("emailError").textContent = "Please enter a valid email address";
+        hasError = true;
+      }
+      
+      if (phone && !validatePhone(phone)) {
+        showToast("Please enter a valid phone number", true);
+        hasError = true;
+      }
+      
+      if (hasError) return;
+      
+      // Track form submission attempt
+      track("form_submit_attempt", {
+        form_id: CREATIO_FORM_ID,
+        landing_id: CREATIO_LANDING_ID
+      });
+      
+      // Track in Creatio
+      if (typeof ct === 'function') {
+        try {
+          ct('trackEvent', 'form_submit', {
+            formId: CREATIO_FORM_ID,
+            email: email,
+            timestamp: new Date().toISOString()
+          });
+        } catch(e) {}
+      }
+      
+      setButtonLoading(true);
+      isSubmitting = true;
+      
+      try {
+        // Get GA client ID
+        const clientId = await getClientId();
+        const utm = getUTM();
+        
+        const formData = {
+          firstName,
+          lastName,
+          email,
+          phone,
+          clientId,
+          utm
+        };
+        
+        // Submit to Creatio (non-blocking - don't await)
+        submitToCreatio(formData).catch(err => {
+          console.error("[Creatio] Non-critical error:", err);
+        });
+        
+        // Submit to webhook
+        await submitToWebhook(formData);
+        
+        // Save identity
+        Identity.save({ email, firstName, lastName, clientId });
+        identify(email);
+        
+        // Clear form draft
+        FormDraft.clear();
+        
+        // Update last submit time
+        lastSubmitTime = Date.now();
+        
+        // Track successful lead
+        track("lead_created", {
+          method: "web_form",
+          email_domain: email.split("@")[1],
+          form_id: CREATIO_FORM_ID
+        });
+        
+        // Track in Creatio
+        if (typeof ct === 'function') {
+          try {
+            ct('trackEvent', 'lead_converted', {
+              email: email,
+              formId: CREATIO_FORM_ID
+            });
+          } catch(e) {}
+        }
+        
+        showToast("🎉 Welcome to Metropolis! We'll contact you soon.", false, 6000);
+        
+        // Reset form
+        document.getElementById("contact-form").reset();
+        
+        // Optional: redirect after success
+        // setTimeout(() => {
+        //   window.location.href = "/thank-you";
+        // }, 2000);
+        
+      } catch (err) {
+        console.error("[Error] Form submission failed:", err);
+        showToast("❌ Something went wrong. Please try again.", true);
+        track("form_submit_error", { error: err.message });
+      } finally {
+        setButtonLoading(false);
+        isSubmitting = false;
+      }
+    }
+
+    /* ================= AUTO-SAVE FUNCTIONALITY ================= */
+    function setupAutoSave() {
+      const fields = ['contact-first-name', 'contact-last-name', 'contact-email-input', 'contact-number'];
+      const indicator = document.getElementById('autoSaveIndicator');
+      
+      function triggerAutoSave() {
+        if (autoSaveTimer) clearTimeout(autoSaveTimer);
+        
+        autoSaveTimer = setTimeout(() => {
+          const saved = FormDraft.save();
+          if (saved && indicator) {
+            indicator.classList.add('show');
+            setTimeout(() => {
+              indicator.classList.remove('show');
+            }, 2000);
+          }
+        }, AUTO_SAVE_DELAY);
+      }
+      
+      fields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+          field.addEventListener('input', triggerAutoSave);
+        }
+      });
+    }
+
+    /* ================= FORM FIELD TRACKING ================= */
+    function setupFieldTracking() {
+      const emailField = document.getElementById("contact-email-input");
+      let formStartTracked = false;
+      
+      if (emailField) {
+        emailField.addEventListener("focus", () => {
+          if (!formStartTracked) {
+            track("form_start", { form_id: CREATIO_FORM_ID });
+            formStartTracked = true;
+            
+            // Track in Creatio
+            if (typeof ct === 'function') {
+              try {
+                ct('trackEvent', 'form_interaction', {
+                  action: 'focus',
+                  field: 'email'
+                });
+              } catch(e) {}
+            }
+          }
+        });
+      }
+      
+      // Track field completion
+      const fields = ['contact-first-name', 'contact-last-name', 'contact-email-input', 'contact-number'];
+      fields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+          field.addEventListener('blur', () => {
+            if (field.value.trim()) {
+              track("form_field_completed", {
+                field_name: fieldId,
+                form_id: CREATIO_FORM_ID
+              });
+            }
+          });
+        }
+      });
+    }
+
+    /* ================= PAGE LOAD TRACKING ================= */
+    function trackPageLoad() {
+      // Track page view
+      track("page_view", {
+        page_title: document.title,
+        page_location: window.location.href,
+        landing_id: CREATIO_LANDING_ID
+      });
+      
+      // Track session start
+      track("session_start", { 
+        timestamp: Date.now(),
+        referrer: document.referrer || 'direct'
+      });
+      
+      // Restore identity if exists
+      const saved = Identity.get();
+      if (saved && saved.email) {
+        identify(saved.email);
+        console.log("[Identity] Restored user:", saved.email);
+        
+        // Link in Creatio
+        if (typeof ct === 'function') {
+          try {
+            ct('identify', { email: saved.email });
+            ct('setUserId', saved.clientId + ':' + GA_ID);
+          } catch(e) {}
+        }
+      }
+      
+      // Restore form draft
+      if (FormDraft.load()) {
+        console.log("[Form] Draft restored");
+        showToast("📝 Your draft has been restored", false, 3000);
+      }
+      
+      // Track UTM parameters if present
+      const utm = getUTM();
+      if (utm.utm_source || utm.utm_medium || utm.utm_campaign) {
+        track("utm_parameters", utm);
+        console.log("[UTM] Tracked parameters:", utm);
+      }
+    }
+
+    /* ================= ERROR HANDLING ================= */
+    function setupGlobalErrorHandling() {
+      window.addEventListener('unhandledrejection', (event) => {
+        console.error('[Global] Unhandled promise rejection:', event.reason);
+        track('unhandled_error', {
+          type: 'promise_rejection',
+          message: event.reason?.message || String(event.reason)
+        });
+      });
+      
+      window.addEventListener('error', (event) => {
+        console.error('[Global] Uncaught error:', event.error);
+        track('unhandled_error', {
+          type: 'runtime_error',
+          message: event.message,
+          filename: event.filename,
+          lineno: event.lineno
+        });
+      });
+    }
+
+    /* ================= INITIALIZATION ================= */
+    document.addEventListener("DOMContentLoaded", () => {
+      console.log("[Init] Page loaded, initializing...", {
+        jQueryLoaded: window.jQueryLoaded,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Initialize global error handling
+      setupGlobalErrorHandling();
+      
+      // Initialize Creatio tracking
+      initCreatioTracking();
+      
+      // Track page load
+      trackPageLoad();
+      
+      // Setup auto-save
+      setupAutoSave();
+      
+      // Setup form tracking
+      setupFieldTracking();
+      
+      // Setup form submission
+      const form = document.getElementById("contact-form");
+      if (form) {
+        form.addEventListener("submit", handleFormSubmit);
+      }
+      
+      console.log("[Init] All systems ready");
     });
   </script>
 </body>
