@@ -114,8 +114,17 @@ function createObject() {
 function initLanding() {
     landing.initLanding(config);
 }
+</script>
 
-jQuery(document).ready(initLanding);
+<!-- ✅ THIS PART (replace here) -->
+<script>
+jQuery(document).ready(function () {
+    initLanding();
+
+    if (typeof ct === "function") {
+        ct('init');
+    }
+});
 </script>
 
 <script>
