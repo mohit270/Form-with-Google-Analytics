@@ -14,42 +14,19 @@
     gtag('config', 'G-DL4C0JH2J1');
   </script>
 
-  <!-- jQuery - Using newer version for better compatibility -->
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
-
-  <!-- Creatio Tracking Scripts - with error handling -->
+  <!-- jQuery - Version 1.11.2 for Creatio compatibility (critical) -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
   <script>
-    // Load Creatio scripts with error tracking
-    function loadCreatioScripts() {
-      const scripts = [
-        'https://webtracking-v01.creatio.com/JS/track-cookies.js',
-        'https://webtracking-v01.creatio.com/JS/create-object.js'
-      ];
-      
-      let loadedCount = 0;
-      
-      scripts.forEach(src => {
-        const script = document.createElement('script');
-        script.src = src;
-        script.onload = () => {
-          loadedCount++;
-          console.log(`[Creatio] Loaded: ${src}`);
-          if (loadedCount === scripts.length) {
-            console.log('[Creatio] All scripts loaded');
-            window.creatioScriptsLoaded = true;
-          }
-        };
-        script.onerror = () => {
-          console.warn(`[Creatio] Failed to load: ${src}`);
-          window.creatioScriptsFailed = true;
-        };
-        document.head.appendChild(script);
-      });
+    // jQuery fallback if CDN fails
+    if (typeof jQuery === 'undefined') {
+      console.warn('[jQuery] Primary CDN failed, loading fallback...');
+      document.write('<script src="https://code.jquery.com/jquery-1.11.2.min.js"><\/script>');
     }
-    
-    // Start loading immediately
-    loadCreatioScripts();
   </script>
+
+  <!-- Creatio Tracking Scripts -->
+  <script src="https://webtracking-v01.creatio.com/JS/track-cookies.js"></script>
+  <script src="https://webtracking-v01.creatio.com/JS/create-object.js"></script>
 
   <style>
     * {
@@ -264,24 +241,6 @@
     .auto-save-indicator.show {
       opacity: 1;
     }
-
-    .status-badge {
-      display: inline-block;
-      font-size: 10px;
-      padding: 2px 8px;
-      border-radius: 12px;
-      margin-top: 10px;
-    }
-
-    .status-success {
-      background: #d4edda;
-      color: #155724;
-    }
-
-    .status-warning {
-      background: #fff3cd;
-      color: #856404;
-    }
   </style>
 </head>
 
@@ -291,7 +250,8 @@
     <h2>Join Metropolis</h2>
     <p class="subtitle">Experience the future of urban living</p>
 
-    <form id="contact-form" method="post">
+    <!-- UPDATED: Added onSubmit event to call Creatio's createObject function -->
+    <form id="contact-form" method="post" onSubmit="createObject(); return false;">
       <div class="honeypot">
         <label for="website">Website</label>
         <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
@@ -299,7 +259,7 @@
 
       <div class="form-group">
         <label>First Name <span class="required">*</span></label>
-        <input type="text" id="contact-first-name" name="FirstName" placeholder="Enter your first name" autocomplete="given-name">
+        <input type="text" id="contact-first-name" name="FullName" placeholder="Enter your first name" autocomplete="given-name" required>
         <div class="error-message" id="firstNameError">Please enter your first name</div>
       </div>
 
@@ -310,7 +270,7 @@
 
       <div class="form-group">
         <label>Email <span class="required">*</span></label>
-        <input type="email" id="contact-email-input" name="Email" placeholder="your@email.com" autocomplete="email">
+        <input type="email" id="contact-email-input" name="Email" placeholder="your@email.com" autocomplete="email" required>
         <div class="error-message" id="emailError">Please enter a valid email address</div>
       </div>
 
@@ -329,10 +289,10 @@
 
   <script>
     /* ================= CONFIGURATION ================= */
+    // UPDATED: Unified Creatio WebForm ID (from your Creatio landing page)
+    const CREATIO_WEBFORM_ID = '81940100-8e25-4b07-9bb9-c81eda47d6df';
     const WEBHOOK = "https://webhooks.creatio.com/webhooks/a92f744b-4c7c-4fdb-81e9-53cca979a993";
     const GA_ID = "G-DL4C0JH2J1";
-    const CREATIO_LANDING_ID = 'c76b7951-3b99-43d3-9466-01abaf130f43';
-    const CREATIO_FORM_ID = 'a6058324-c3ec-aa2e-add4-12522446fcca';
     const CREATIO_ENTITY_NAME = 'FormSubmit';
     const SUBMIT_COOLDOWN = 30000;
     const AUTO_SAVE_DELAY = 2000;
@@ -341,7 +301,6 @@
     let lastSubmitTime = 0;
     let autoSaveTimer = null;
     let isSubmitting = false;
-    let creatioReady = false;
 
     /* ================= UTM TRACKING ================= */
     function getUTM() {
@@ -463,86 +422,52 @@
       }
     }
 
-    /* ================= SAFE CREATIO SUBMISSION ================= */
-    // This function safely calls Creatio without throwing jQuery selector errors
-    async function safeCreatioSubmission(formData) {
-      // Check if Creatio functions are available AND not broken
-      const hasCreateObject = typeof window.createObjectFromLanding === 'function';
-      const hasLandingCreate = window.landing && typeof window.landing.createObjectFromLanding === 'function';
-      const hasCreateObjectAlt = typeof window.createObject === 'function';
-      
-      if (!hasCreateObject && !hasLandingCreate && !hasCreateObjectAlt) {
-        console.log("[Creatio] No submission methods available, skipping");
-        return false;
-      }
-      
-      try {
-        const fullName = (formData.firstName + " " + formData.lastName).trim();
-        
-        // CRITICAL FIX: Use jQuery objects directly, not string selectors with special chars
-        // The error happens because Creatio tries to use email as a selector like $(email)
-        // To avoid this, we need to ensure our field IDs don't contain special characters
-        // and we use proper DOM element references
-        
-        const creatioConfig = {
-          // Use exact element references that Creatio expects
-          fields: {
-            "FullName": fullName,
-            "Email": document.getElementById("contact-email-input"),
-            "PhoneNumber": document.getElementById("contact-number")
-          },
-          contactFields: {
-            "FullName": fullName,
-            "Email": document.getElementById("contact-email-input"),
-            "Phone": document.getElementById("contact-number")
-          },
-          customFields: {
-            "WebFormId": "81940100-8e25-4b07-9bb9-c81eda47d6df",
-            // "LandingPageId": CREATIO_LANDING_ID
-          },
-          landingId: "81940100-8e25-4b07-9bb9-c81eda47d6df",
-          serviceUrl: "https://184784-crm-bundle.creatio.com/0/ServiceModel/GeneratedObjectWebFormService.svc/SaveWebFormObjectData"
-        };
-        
-        // Try each method safely with try-catch
-        if (hasCreateObject) {
-          try {
-            window.createObjectFromLanding(creatioConfig);
-            console.log("[Creatio] Submitted via createObjectFromLanding");
-            return true;
-          } catch(e) {
-            console.error("[Creatio] createObjectFromLanding failed:", e.message);
-          }
-        }
-        
-        if (hasLandingCreate) {
-          try {
-            window.landing.createObjectFromLanding(creatioConfig);
-            console.log("[Creatio] Submitted via landing.createObjectFromLanding");
-            return true;
-          } catch(e) {
-            console.error("[Creatio] landing.createObjectFromLanding failed:", e.message);
-          }
-        }
-        
-        if (hasCreateObjectAlt) {
-          try {
-            window.createObject(creatioConfig);
-            console.log("[Creatio] Submitted via createObject");
-            return true;
-          } catch(e) {
-            console.error("[Creatio] createObject failed:", e.message);
-          }
-        }
-        
-        return false;
-      } catch(err) {
-        console.error("[Creatio] Submission error:", err);
+    /* ================= CREATIO NATIVE INTEGRATION (CRITICAL FIX) ================= */
+    // This is the official Creatio configuration from your landing page
+    var creatioConfig = {
+      fields: {
+        "FullName": "#contact-first-name",
+        "PhoneNumber": "#contact-number",
+        "Email": "#contact-email-input"
+      },
+      contactFields: {
+        "FullName": "#contact-first-name",
+        "Phone": "#contact-number",
+        "Email": "#contact-email-input"
+      },
+      customFields: {
+        "WebFormId": CREATIO_WEBFORM_ID
+      },
+      landingId: CREATIO_WEBFORM_ID,
+      serviceUrl: "https://184784-crm-bundle.creatio.com/0/ServiceModel/GeneratedObjectWebFormService.svc/SaveWebFormObjectData",
+      redirectUrl: ""
+    };
+
+    // Creatio's required function - called by form onSubmit
+    function createObject() {
+      if (typeof window.landing !== 'undefined' && typeof window.landing.createObjectFromLanding === 'function') {
+        window.landing.createObjectFromLanding(creatioConfig);
+        console.log("[Creatio Native] Form submitted successfully");
+        return true;
+      } else if (typeof window.createObjectFromLanding === 'function') {
+        window.createObjectFromLanding(creatioConfig);
+        console.log("[Creatio Native] Form submitted via createObjectFromLanding");
+        return true;
+      } else {
+        console.warn("[Creatio Native] Creatio functions not available - check if scripts loaded");
         return false;
       }
     }
 
-    /* ================= WEBHOOK SUBMISSION ================= */
+    // Initialize Creatio landing page tracking
+    function initLanding() {
+      if (typeof window.landing !== 'undefined' && typeof window.landing.initLanding === 'function') {
+        window.landing.initLanding(creatioConfig);
+        console.log("[Creatio Native] Landing page initialized");
+      }
+    }
+
+    /* ================= WEBHOOK SUBMISSION (BACKUP) ================= */
     async function submitToWebhook(formData) {
       const webhookPayload = {
         FirstName: formData.firstName,
@@ -550,8 +475,8 @@
         Email: formData.email,
         PhoneNumber: formData.phone,
         EntityName: CREATIO_ENTITY_NAME,
-        FormId: CREATIO_FORM_ID,
-        LandingPageId: CREATIO_LANDING_ID,
+        FormId: CREATIO_WEBFORM_ID,
+        LandingPageId: CREATIO_WEBFORM_ID,
         TrackingUserId: formData.clientId + ':' + GA_ID,
         PageUrl: window.location.href,
         ReferrerUrl: document.referrer || "",
@@ -568,7 +493,6 @@
       
       if (!res.ok) throw new Error(`Webhook failed: ${res.status}`);
       
-      // Handle non-JSON response gracefully
       const contentType = res.headers.get("content-type");
       if (contentType && contentType.includes("application/json")) {
         return await res.json();
@@ -664,20 +588,26 @@
       return false;
     }
 
-    /* ================= FORM SUBMISSION ================= */
+    /* ================= FORM SUBMISSION HANDLER ================= */
     async function handleFormSubmit(e) {
-      e.preventDefault();
+      // Don't prevent default here - let Creatio handle it
+      // But we still want to track and send to webhook
       
       if (isSubmitting) {
         showToast("Please wait, form is already being submitted", true);
-        return;
+        e.preventDefault();
+        return false;
       }
       
-      if (!checkRateLimit()) return;
+      if (!checkRateLimit()) {
+        e.preventDefault();
+        return false;
+      }
       
       if (isSpam()) {
         showToast("Submission blocked", true);
-        return;
+        e.preventDefault();
+        return false;
       }
       
       const firstName = document.getElementById("contact-first-name").value.trim();
@@ -710,11 +640,15 @@
         hasError = true;
       }
       
-      if (hasError) return;
+      if (hasError) {
+        e.preventDefault();
+        return false;
+      }
       
+      // Track form submission attempt
       track("form_submit_attempt", {
-        form_id: CREATIO_FORM_ID,
-        landing_id: CREATIO_LANDING_ID
+        form_id: CREATIO_WEBFORM_ID,
+        landing_id: CREATIO_WEBFORM_ID
       });
       
       setButtonLoading(true);
@@ -733,17 +667,14 @@
           utm
         };
         
-        // Submit to webhook (primary - this works!)
-        const webhookResult = await submitToWebhook(formData);
-        console.log("[Webhook] Submission successful:", webhookResult);
-        
-        // Try Creatio submission in background (don't block on it, don't show errors)
-        safeCreatioSubmission(formData).catch(err => {
-          // Silently fail - webhook already succeeded
-          console.log("[Creatio] Background submission note:", err.message);
+        // Send to webhook as backup (don't await - let it run in background)
+        submitToWebhook(formData).then(result => {
+          console.log("[Webhook] Submission successful:", result);
+        }).catch(err => {
+          console.log("[Webhook] Submission note:", err.message);
         });
         
-        // Save identity
+        // Save identity for future visits
         Identity.save({ email, firstName, lastName, clientId });
         identify(email);
         FormDraft.clear();
@@ -752,20 +683,29 @@
         track("lead_created", {
           method: "web_form",
           email_domain: email.split("@")[1],
-          form_id: CREATIO_FORM_ID
+          form_id: CREATIO_WEBFORM_ID
         });
         
-        showToast("🎉 Welcome to Metropolis! We'll contact you soon.", false, 6000);
-        document.getElementById("contact-form").reset();
+        // Success message will be shown after Creatio submission
+        // The form will reset after Creatio processes
         
       } catch (err) {
         console.error("[Error] Form submission failed:", err);
         showToast("❌ Something went wrong. Please try again.", true);
         track("form_submit_error", { error: err.message });
-      } finally {
         setButtonLoading(false);
         isSubmitting = false;
+        e.preventDefault();
+        return false;
       }
+      
+      // Reset button state after delay (Creatio will handle form reset)
+      setTimeout(() => {
+        setButtonLoading(false);
+        isSubmitting = false;
+      }, 3000);
+      
+      return true; // Allow Creatio to process
     }
 
     /* ================= AUTO-SAVE FUNCTIONALITY ================= */
@@ -803,7 +743,7 @@
       if (emailField) {
         emailField.addEventListener("focus", () => {
           if (!formStartTracked) {
-            track("form_start", { form_id: CREATIO_FORM_ID });
+            track("form_start", { form_id: CREATIO_WEBFORM_ID });
             formStartTracked = true;
           }
         });
@@ -817,7 +757,7 @@
             if (field.value.trim()) {
               track("form_field_completed", {
                 field_name: fieldId,
-                form_id: CREATIO_FORM_ID
+                form_id: CREATIO_WEBFORM_ID
               });
             }
           });
@@ -830,7 +770,7 @@
       track("page_view", {
         page_title: document.title,
         page_location: window.location.href,
-        landing_id: CREATIO_LANDING_ID
+        landing_id: CREATIO_WEBFORM_ID
       });
       
       track("session_start", { 
@@ -857,29 +797,26 @@
     }
 
     /* ================= INITIALIZATION ================= */
-    document.addEventListener("DOMContentLoaded", () => {
+    jQuery(document).ready(function() {
       console.log("[Init] Page loaded, initializing...");
       
+      // Initialize Creatio landing page
+      initLanding();
+      
+      // Track page load
       trackPageLoad();
+      
+      // Setup features
       setupAutoSave();
       setupFieldTracking();
       
+      // Add additional submit handler for tracking (Creatio's onSubmit handles the actual submission)
       const form = document.getElementById("contact-form");
       if (form) {
         form.addEventListener("submit", handleFormSubmit);
       }
       
-      // Check Creatio status after a delay
-      setTimeout(() => {
-        const hasCreatio = typeof window.createObjectFromLanding === 'function';
-        console.log(`[Creatio] Status: ${hasCreatio ? 'Available' : 'Not available (will use webhook only)'}`);
-        if (!hasCreatio) {
-          // This is fine - webhook will still work
-          console.log("[Creatio] Using webhook-only mode - submissions will still work");
-        }
-      }, 3000);
-      
-      console.log("[Init] All systems ready");
+      console.log("[Init] All systems ready - jQuery version:", jQuery.fn.jquery);
     });
   </script>
 </body>
