@@ -20,7 +20,6 @@
     document.addEventListener('DOMContentLoaded', function() {
       if (typeof crtLanding !== 'undefined') {
         // CRITICAL: NO webhookServiceUrl - prevents duplicates
-        crtLanding.webhookServiceUrl = 'https://webhooks.creatio.com/webhooks/6a744183-38e5-45bf-af3a-6b9e362f3488';
         crtLanding.setParameter('LandingPageId', 'c76b7951-3b99-43d3-9466-01abaf130f43');
         crtLanding.setParameter('FormId', 'a6058324-c3ec-aa2e-add4-12522446fcca');
         crtLanding.init(); // Tracking only
