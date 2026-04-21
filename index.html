@@ -25,7 +25,7 @@
         crtLanding.setParameter('FormId', 'a6058324-c3ec-aa2e-add4-12522446fcca');
         crtLanding.init();
         
-        // Field tracking for web analytics (UNCOMMENTED - THIS WAS MISSING)
+        // Field tracking for web analytics
         const trackField = (fieldId, fieldName) => {
           const field = document.getElementById(fieldId);
           if (field) {
@@ -89,16 +89,6 @@
           console.warn('[Creatio Fix] ⚠ window.landing not fully ready, will retry');
           setTimeout(initCreatio, 200);
           return;
-        }
-        
-        // Method 3: Initialize landing if needed
-        if (typeof window.landing.initLanding === 'function') {
-          try {
-            window.landing.initLanding();
-            console.log('[Creatio Fix] ✓ Landing initialized');
-          } catch(e) {
-            console.log('[Creatio Fix] Landing init not needed:', e.message);
-          }
         }
         
         // Log available Creatio-related functions for debugging
@@ -345,13 +335,14 @@
 
       <div class="form-group">
         <label>First Name <span class="required">*</span></label>
-        <input type="text" id="contact-first-name" name="FullName" placeholder="Enter your first name" autocomplete="given-name" required>
+        <input type="text" id="contact-first-name" name="FirstName" placeholder="Enter your first name" autocomplete="given-name" required>
         <div class="error-message" id="firstNameError">Please enter your first name</div>
       </div>
 
       <div class="form-group">
         <label>Last Name</label>
         <input type="text" id="contact-last-name" name="LastName" placeholder="Enter your last name" autocomplete="family-name">
+        <div class="error-message" id="lastNameError"></div>
       </div>
 
       <div class="form-group">
@@ -362,7 +353,8 @@
 
       <div class="form-group">
         <label>Phone Number</label>
-        <input type="tel" id="contact-number" name="Phone" placeholder="+1 234 567 8900" autocomplete="tel">
+        <input type="tel" id="contact-number" name="PhoneNumber" placeholder="+1 234 567 8900" autocomplete="tel">
+        <div class="error-message" id="phoneError"></div>
       </div>
 
       <button type="submit" id="contact-submit-btn">Get Started</button>
@@ -508,16 +500,18 @@
       }
     }
 
-    /* ================= CREATIO NATIVE INTEGRATION (FIXED) ================= */
+    /* ================= CREATIO NATIVE INTEGRATION (FIXED FIELD NAMES) ================= */
     var creatioConfig = {
       fields: {
-        "FullName": "#contact-first-name",
-        "PhoneNumber": "#contact-number",
+        "FirstName": "#contact-first-name",     // Changed from "FullName" to "FirstName"
+        "LastName": "#contact-last-name",       // Added LastName field
+        "PhoneNumber": "#contact-number",       // Changed from "PhoneNumber" (keep consistent)
         "Email": "#contact-email-input"
       },
       contactFields: {
-        "FullName": "#contact-first-name",
-        "Phone": "#contact-number",
+        "FirstName": "#contact-first-name",     // Changed from "FullName"
+        "LastName": "#contact-last-name",       // Added LastName
+        "Phone": "#contact-number",             // Keep as "Phone" for contact object
         "Email": "#contact-email-input"
       },
       customFields: {
@@ -528,7 +522,7 @@
       redirectUrl: ""
     };
 
-    // FIXED: Enhanced createObject function with multiple fallback methods
+    // Enhanced createObject function with multiple fallback methods
     function createObject() {
       console.log('[Creatio] Attempting to create object...');
       console.log('[Creatio] window.landing exists?', typeof window.landing !== 'undefined');
@@ -547,10 +541,6 @@
         {
           name: 'window.parent.createObjectFromLanding',
           fn: () => window.parent !== window ? window.parent?.createObjectFromLanding?.(creatioConfig) : null
-        },
-        {
-          name: 'window.opener.createObjectFromLanding',
-          fn: () => window.opener?.createObjectFromLanding?.(creatioConfig)
         }
       ];
       
@@ -563,33 +553,6 @@
           }
         } catch(e) {
           console.log(`[Creatio] Method ${method.name} failed:`, e.message);
-        }
-      }
-      
-      // If all methods failed, try direct jQuery-based submission
-      if (typeof jQuery !== 'undefined') {
-        try {
-          console.log('[Creatio] Trying jQuery-based submission...');
-          jQuery.ajax({
-            url: creatioConfig.serviceUrl,
-            type: 'POST',
-            data: JSON.stringify({
-              FullName: jQuery('#contact-first-name').val(),
-              Email: jQuery('#contact-email-input').val(),
-              Phone: jQuery('#contact-number').val(),
-              WebFormId: CREATIO_WEBFORM_ID
-            }),
-            contentType: 'application/json',
-            success: function() {
-              console.log('[Creatio] ✓ jQuery fallback submission successful');
-            },
-            error: function(err) {
-              console.error('[Creatio] jQuery fallback failed:', err);
-            }
-          });
-          return true;
-        } catch(e) {
-          console.error('[Creatio] jQuery fallback error:', e);
         }
       }
       
@@ -608,48 +571,57 @@
       // Clear any error states
       showFieldError("contact-first-name", false);
       showFieldError("contact-email-input", false);
+      showFieldError("contact-last-name", false);
+      showFieldError("contact-number", false);
       
       // Clear auto-save draft
       FormDraft.clear();
     }
 
-    /* ================= WEBHOOK SUBMISSION (BACKUP) ================= */
+    /* ================= WEBHOOK SUBMISSION (CORRECTED FORMAT - MATCHES SUCCESSFUL SUBMISSIONS) ================= */
     async function submitToWebhook(formData) {
+      // CRITICAL: Use EXACT format that Creatio expects based on successful submissions
+      // Successful format from screenshot: 
+      // {"FirstName":"Mukash","LastName":"Kara","Email":"Mukash.kara@gmail.com","PhoneNumber":"9098980908","EntityName":"FormSubmit","FormId":"a6058324-c3ec-aa2e-add4-12522446fcca"}
+      
       const webhookPayload = {
-        FirstName: formData.firstName,
-        LastName: formData.lastName,
-        Email: formData.email,
-        PhoneNumber: formData.phone,
-        EntityName: CREATIO_ENTITY_NAME,
-        FormId: CREATIO_WEBFORM_ID,
-        LandingPageId: CREATIO_LANDINGPAGE_ID,
-        TrackingUserId: formData.clientId + ':' + GA_ID,
-        PageUrl: window.location.href,
-        ReferrerUrl: document.referrer || "",
-        UserAgent: navigator.userAgent,
-        Timestamp: new Date().toISOString(),
-        ...formData.utm
+        FirstName: formData.firstName,        // ✅ "FirstName" not "FullName"
+        LastName: formData.lastName,          // ✅ Keep as "LastName"
+        Email: formData.email,                // ✅ Keep as "Email"
+        PhoneNumber: formData.phone,          // ✅ "PhoneNumber" not "Phone"
+        EntityName: CREATIO_ENTITY_NAME,      // ✅ REQUIRED: "FormSubmit"
+        FormId: CREATIO_WEBFORM_ID            // ✅ Form ID only
       };
+      
+      // Remove any empty or undefined fields
+      if (!webhookPayload.LastName) delete webhookPayload.LastName;
+      if (!webhookPayload.PhoneNumber) delete webhookPayload.PhoneNumber;
+      
+      // CRITICAL: Do NOT send these fields - they cause failures:
+      // - Website, PageUrl, LandingPageId, UserAgent, Timestamp, FullName, utm_* fields
+      
+      console.log('[Webhook] Sending payload (corrected format):', JSON.stringify(webhookPayload, null, 2));
       
       try {
         const res = await fetch(WEBHOOK, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
           body: JSON.stringify(webhookPayload)
         });
         
-        if (!res.ok) throw new Error(`Webhook failed: ${res.status}`);
-        
-        const contentType = res.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          return await res.json();
-        } else {
-          const text = await res.text();
-          console.log("[Webhook] Response (non-JSON):", text);
-          return { success: true, message: "Submission received" };
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(`HTTP ${res.status}: ${errorText}`);
         }
+        
+        const result = await res.json();
+        console.log("[Webhook] ✓ Success:", result);
+        return { success: true, data: result };
       } catch(err) {
-        console.log("[Webhook] Submission note:", err.message);
+        console.error("[Webhook] ✗ Failed:", err.message);
         return { success: false, error: err.message };
       }
     }
@@ -703,7 +675,7 @@
       return re.test(phone);
     }
 
-    function showFieldError(fieldId, show) {
+    function showFieldError(fieldId, show, message = '') {
       const field = document.getElementById(fieldId);
       const errorEl = document.getElementById(`${fieldId}Error`);
       if (!field || !errorEl) return;
@@ -711,9 +683,11 @@
       if (show) {
         field.classList.add('error');
         errorEl.classList.add('show');
+        if (message) errorEl.textContent = message;
       } else {
         field.classList.remove('error');
         errorEl.classList.remove('show');
+        errorEl.textContent = '';
       }
     }
 
@@ -765,26 +739,26 @@
       
       showFieldError("contact-first-name", false);
       showFieldError("contact-email-input", false);
+      showFieldError("contact-last-name", false);
+      showFieldError("contact-number", false);
       
       let hasError = false;
       
       if (!firstName) {
-        showFieldError("contact-first-name", true);
+        showFieldError("contact-first-name", true, "Please enter your first name");
         hasError = true;
       }
       
       if (!email) {
-        showFieldError("contact-email-input", true);
-        document.getElementById("emailError").textContent = "Please enter your email address";
+        showFieldError("contact-email-input", true, "Please enter your email address");
         hasError = true;
       } else if (!validateEmail(email)) {
-        showFieldError("contact-email-input", true);
-        document.getElementById("emailError").textContent = "Please enter a valid email address";
+        showFieldError("contact-email-input", true, "Please enter a valid email address");
         hasError = true;
       }
       
       if (phone && !validatePhone(phone)) {
-        showToast("Please enter a valid phone number", true);
+        showFieldError("contact-number", true, "Please enter a valid phone number");
         hasError = true;
       }
       
@@ -823,21 +797,23 @@
           utm
         };
         
-        // Submit to Creatio Native (FIXED - THIS WILL NOW WORK)
+        // Submit to Creatio Native
         const creatioSuccess = createObject();
         
         if (creatioSuccess) {
           console.log('[Creatio] Lead creation initiated successfully');
         } else {
-          console.warn('[Creatio] Lead creation may have failed, but webhook will handle backup');
+          console.warn('[Creatio] Lead creation may have failed, using webhook backup');
         }
         
-        // Send to webhook as backup (async, don't wait)
-        submitToWebhook(formData).then(result => {
-          console.log("[Webhook] Submission result:", result);
-        }).catch(err => {
-          console.log("[Webhook] Submission note:", err.message);
-        });
+        // Send to webhook with CORRECTED format (this will now create contacts successfully)
+        const webhookResult = await submitToWebhook(formData);
+        
+        if (webhookResult.success) {
+          console.log("[Webhook] Lead created successfully in Creatio");
+        } else {
+          console.warn("[Webhook] Webhook submission had issues:", webhookResult.error);
+        }
         
         // Save identity for future visits
         Identity.save({ email, firstName, lastName, clientId });
@@ -846,7 +822,7 @@
         
         // Track successful lead creation in GA4
         track("lead_created", {
-          method: "web_form",
+          method: "webhook",
           email_domain: email.split("@")[1],
           form_id: CREATIO_WEBFORM_ID
         });
@@ -870,7 +846,7 @@
         return false;
       }
       
-      return false; // Prevent default form submission
+      return false;
     }
 
     /* ================= AUTO-SAVE FUNCTIONALITY ================= */
