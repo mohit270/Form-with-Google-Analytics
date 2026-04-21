@@ -14,26 +14,42 @@
     gtag('config', 'G-DL4C0JH2J1');
   </script>
 
-  <!-- Creatio Web Analytics (TRACKING ONLY - NO webhookServiceUrl) -->
+  <!-- Creatio Web Analytics (CORRECTED VERSION) -->
   <script src="https://cdn.creatio.com/JS/crt-landing-page.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       if (typeof crtLanding !== 'undefined') {
-        // CRITICAL: NO webhookServiceUrl - prevents duplicates
+        // Configure Creatio Web Analytics
+        crtLanding.setParameter('webhookServiceUrl', 'https://184784-crm-bundle.creatio.com/0/ServiceModel/WebhookService.svc/Webhook');
         crtLanding.setParameter('LandingPageId', 'c76b7951-3b99-43d3-9466-01abaf130f43');
         crtLanding.setParameter('FormId', 'a6058324-c3ec-aa2e-add4-12522446fcca');
-        crtLanding.init(); // Tracking only
         
-        // Field tracking
+        // Initialize tracking
+        crtLanding.init();
+        
+        // Track page view
+        crtLanding.sendEvent('page_view', {
+          page: window.location.pathname,
+          title: document.title
+        });
+        
+        // Set up field tracking using CORRECT methods
         const trackField = (fieldId, fieldName) => {
           const field = document.getElementById(fieldId);
           if (field) {
             field.addEventListener('focus', () => {
-              crtLanding.trackEvent('field_focus', { field: fieldName });
+              // Use sendEvent instead of trackEvent
+              crtLanding.sendEvent('field_focus', { 
+                field_name: fieldName,
+                field_id: fieldId
+              });
             });
             field.addEventListener('blur', () => {
               if (field.value.trim()) {
-                crtLanding.trackEvent('field_completed', { field: fieldName });
+                crtLanding.sendEvent('field_completed', { 
+                  field_name: fieldName,
+                  field_value_length: field.value.trim().length
+                });
               }
             });
           }
@@ -43,6 +59,10 @@
         trackField('contact-last-name', 'last_name');
         trackField('contact-email-input', 'email');
         trackField('contact-number', 'phone');
+        
+        console.log('Creatio Web Analytics initialized successfully');
+      } else {
+        console.error('Creatio Web Analytics not loaded');
       }
     });
   </script>
@@ -72,22 +92,45 @@
       width: 100%;
       max-width: 400px;
       text-align: center;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
     }
     .form-group { margin-bottom: 15px; text-align: left; }
-    input { width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e0e0e0; }
+    input { 
+      width: 100%; 
+      padding: 12px; 
+      border-radius: 8px; 
+      border: 2px solid #e0e0e0;
+      font-size: 16px;
+      transition: border-color 0.3s;
+    }
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
     button {
       width: 100%; padding: 14px;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: #fff; border: none; border-radius: 8px;
-      cursor: pointer; font-weight: bold;
+      cursor: pointer; font-weight: bold; font-size: 16px;
+      transition: transform 0.2s;
+    }
+    button:hover:not(:disabled) {
+      transform: translateY(-2px);
+    }
+    button:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
     }
     #toast {
       position: fixed; bottom: 20px; left: 50%;
       transform: translateX(-50%); min-width: 300px;
-      padding: 10px; border-radius: 8px; text-align: center;
+      padding: 12px 20px; border-radius: 8px; text-align: center;
+      z-index: 1000;
+      font-weight: 500;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
-    .toast-success { background: #d4edda; color: #155724; }
-    .toast-error { background: #f8d7da; color: #721c24; }
+    .toast-success { background: #d4edda; color: #155724; border-left: 4px solid #28a745; }
+    .toast-error { background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545; }
     .loading-spinner {
       display: inline-block; width: 16px; height: 16px;
       border: 2px solid #fff; border-top-color: transparent;
@@ -99,9 +142,23 @@
     .error-message { color: #e74c3c; font-size: 11px; margin-top: 5px; display: none; }
     .error-message.show { display: block; }
     input.error { border-color: #e74c3c; }
-    .auto-save-indicator { font-size: 10px; color: #999; margin-top: 10px; opacity: 0; transition: opacity 0.3s ease; }
+    .auto-save-indicator { 
+      font-size: 12px; 
+      color: #28a745; 
+      margin-top: 10px; 
+      opacity: 0; 
+      transition: opacity 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
     .auto-save-indicator.show { opacity: 1; }
     .honeypot { position: absolute; left: -9999px; opacity: 0; height: 0; width: 0; overflow: hidden; }
+    .subtitle {
+      color: #666;
+      margin-bottom: 25px;
+    }
   </style>
 </head>
 
@@ -141,7 +198,9 @@
       <button type="submit" id="contact-submit-btn">Get Started</button>
     </form>
 
-    <div class="auto-save-indicator" id="autoSaveIndicator">✓ Draft saved</div>
+    <div class="auto-save-indicator" id="autoSaveIndicator">
+      <span>✓</span> Draft saved
+    </div>
   </div>
   <div id="toast"></div>
 
@@ -225,11 +284,13 @@
       
       if (!firstName) {
         showFieldError("contact-first-name", true);
+        showToast("Please enter your first name", true);
         return false;
       }
       if (!email || !email.includes('@')) {
         showFieldError("contact-email-input", true);
         document.getElementById("emailError").textContent = "Please enter a valid email address";
+        showToast("Please enter a valid email address", true);
         return false;
       }
       
@@ -255,13 +316,19 @@
         if (utm.utm_source) gtag('event', 'utm_parameters', utm);
       }
       
-      // Track in Creatio Web Analytics
-      if (typeof crtLanding !== 'undefined') {
-        crtLanding.trackEvent('form_submit', { formId: CREATIO_WEBFORM_ID });
+      // Track in Creatio Web Analytics - USING CORRECT METHOD
+      if (typeof crtLanding !== 'undefined' && crtLanding.sendEvent) {
+        crtLanding.sendEvent('form_submit', { 
+          formId: CREATIO_WEBFORM_ID,
+          email_domain: email.split('@')[1]
+        });
+        console.log('Creatio form submit event sent');
+      } else {
+        console.warn('crtLanding.sendEvent not available');
       }
       
       // ONLY ONE SUBMISSION - Creatio Native
-      if (typeof window.landing?.createObjectFromLanding === 'function') {
+      if (typeof window.landing !== 'undefined' && typeof window.landing.createObjectFromLanding === 'function') {
         window.landing.createObjectFromLanding(creatioConfig);
         
         if (typeof gtag === 'function') {
@@ -280,7 +347,8 @@
         
         return true;
       } else {
-        showToast("Submission system unavailable", true);
+        console.error('window.landing.createObjectFromLanding not available');
+        showToast("Submission system unavailable. Please try again later.", true);
         setButtonLoading(false);
         isSubmitting = false;
         return false;
@@ -328,20 +396,25 @@
       const fields = ['contact-first-name', 'contact-last-name', 'contact-email-input', 'contact-number'];
       const indicator = document.getElementById('autoSaveIndicator');
       fields.forEach(fieldId => {
-        document.getElementById(fieldId)?.addEventListener('input', () => {
-          if (autoSaveTimer) clearTimeout(autoSaveTimer);
-          autoSaveTimer = setTimeout(() => {
-            FormDraft.save();
-            indicator.classList.add('show');
-            setTimeout(() => indicator.classList.remove('show'), 2000);
-          }, AUTO_SAVE_DELAY);
-        });
+        const field = document.getElementById(fieldId);
+        if (field) {
+          field.addEventListener('input', () => {
+            if (autoSaveTimer) clearTimeout(autoSaveTimer);
+            autoSaveTimer = setTimeout(() => {
+              FormDraft.save();
+              indicator.classList.add('show');
+              setTimeout(() => indicator.classList.remove('show'), 2000);
+            }, AUTO_SAVE_DELAY);
+          });
+        }
       });
     }
 
     // Initialize
-    FormDraft.load() && showToast("📝 Draft restored", false, 3000);
+    console.log('Page initialized');
+    FormDraft.load() && showToast("📝 Draft restored", false);
     setupAutoSave();
+    
     if (typeof gtag === 'function') {
       gtag('event', 'page_view', { landing_id: CREATIO_WEBFORM_ID });
       gtag('event', 'session_start', { timestamp: Date.now() });
